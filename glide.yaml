@@ -18,3 +18,5 @@ import:
   version: master
 - package: github.com/mattn/go-colorable
   version: master
+- package: github.com/jinzhu/gorm
+  version: master

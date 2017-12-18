@@ -22,15 +22,19 @@ SET FOREIGN_KEY_CHECKS = 0;
 -- ----------------------------
 DROP TABLE IF EXISTS `user`;
 CREATE TABLE `user` (
-  `userid` bigint(20) NOT NULL,
-  `name` varchar(16) NOT NULL,
-  `cash` float NOT NULL,
+  `userid` bigint(20) unsigned zerofill NOT NULL AUTO_INCREMENT,
+  `name` varchar(16) NOT NULL DEFAULT '',
+  `cash` float NOT NULL DEFAULT '123',
   `gender` bit(1) NOT NULL,
   `card` enum('123123','123123432','ewrwer','234wer') NOT NULL,
   `create_time` date NOT NULL,
   `payment` double DEFAULT NULL,
-  `address` json DEFAULT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+  `address` json DEFAULT NULL,
+  `setddd` set('234234','dsfasdf','ASDFa') DEFAULT NULL,
+  `set` set('ADFSdf','324234','erwer') NOT NULL,
+  PRIMARY KEY (`userid`),
+  UNIQUE KEY `aa` (`name`) USING BTREE COMMENT 'adsfa'
+) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8;
 
 -- ----------------------------
 -- Records of user

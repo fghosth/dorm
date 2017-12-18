@@ -4,12 +4,23 @@ import (
 	// "fmt"
 	"errors"
 	"os"
+	"regexp"
 	"strings"
 )
 
 type Dstring struct {
 }
 
+//获取``等符号中的内容
+func (ds *Dstring) PixContent(str string, symbol string) string {
+	reg := symbol + ".+" + symbol
+	r := regexp.MustCompile(reg)
+	content := r.FindString(str)
+	content = strings.Replace(content, "`", "", -1)
+	return content
+}
+
+//首字母转小写
 func (ds *Dstring) FUPer(str string) (string, error) {
 	errEmpty := errors.New("字符串为空")
 	v := []byte(str)
@@ -22,6 +33,7 @@ func (ds *Dstring) FUPer(str string) (string, error) {
 	return string(v), nil
 }
 
+//判断文件或目录是否存在
 func (ds *Dstring) FileOrPathExists(path string) (bool, error) {
 	errFileExist := errors.New(path + "文件已存在")
 	_, err := os.Stat(path)
@@ -34,6 +46,7 @@ func (ds *Dstring) FileOrPathExists(path string) (bool, error) {
 	return true, err
 }
 
+//获取方法
 func (ds *Dstring) GetMeth(mby string) string {
 	mbyArr := strings.Split(mby, ",")
 	mby = ""

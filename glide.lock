@@ -1,5 +1,5 @@
-hash: bd477b8e15ead6abfded45189cbba6ec3a229ea9aa29630447dce6fe9fa19ec5
-updated: 2017-12-17T20:09:08.897035+08:00
+hash: 7661f978c139d3213d7f4122b1bf59ffa86004f80b8704f996a4f7ad07b15914
+updated: 2017-12-18T19:23:58.656576+08:00
 imports:
 - name: github.com/aymerick/raymond
   version: 72acac2207479d21dd45898c2a4264246c818148
@@ -15,6 +15,8 @@ imports:
   version: 9181e3a86a19bacd63e68d43ae8b7b36320d8092
 - name: github.com/hoisie/mustache
   version: 6375acf62c69d9d3ad20fd0599d82ca94ea12284
+- name: github.com/jinzhu/gorm
+  version: 0a51f6cdc55d1650d9ed3b4c13026cfa9133b01e
 - name: github.com/k0kubun/pp
   version: e057ee7a28277be4d2af303443b6da377768181f
 - name: github.com/mattn/go-colorable
