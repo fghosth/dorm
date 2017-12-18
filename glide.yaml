@@ -1,0 +1,20 @@
+package: jvole.com/createProject
+import:
+- package: github.com/urfave/cli
+  version: master
+- package: github.com/spf13/afero
+  version: ^1.0.0
+- package: github.com/bndr/gotabulate
+  version: master
+- package: github.com/hoisie/mustache
+  version: master
+- package: github.com/aymerick/raymond
+  version: master
+- package: github.com/go-sql-driver/mysql
+  version: master
+- package: github.com/go-kit/kit
+  version: master
+- package: github.com/k0kubun/pp
+  version: master
+- package: github.com/mattn/go-colorable
+  version: master

@@ -1,0 +1,38 @@
+hash: bd477b8e15ead6abfded45189cbba6ec3a229ea9aa29630447dce6fe9fa19ec5
+updated: 2017-12-17T20:09:08.897035+08:00
+imports:
+- name: github.com/aymerick/raymond
+  version: 72acac2207479d21dd45898c2a4264246c818148
+  subpackages:
+  - ast
+  - lexer
+  - parser
+- name: github.com/bndr/gotabulate
+  version: bc555436bfd5d4e93a2dd35b462ce37e067afdda
+- name: github.com/go-kit/kit
+  version: 1b4cf21e19ea1dae31038b02c4982eea5b4214b7
+- name: github.com/go-sql-driver/mysql
+  version: 9181e3a86a19bacd63e68d43ae8b7b36320d8092
+- name: github.com/hoisie/mustache
+  version: 6375acf62c69d9d3ad20fd0599d82ca94ea12284
+- name: github.com/k0kubun/pp
+  version: e057ee7a28277be4d2af303443b6da377768181f
+- name: github.com/mattn/go-colorable
+  version: 6fcc0c1fd9b620311d821b106a400b35dc95c497
+- name: github.com/mattn/go-isatty
+  version: 6ca4dbf54d38eea1a992b3c722a76a5d1c4cb25c
+- name: github.com/mattn/go-runewidth
+  version: 97311d9f7767e3d6f422ea06661bc2c7a19e8a5d
+- name: github.com/spf13/afero
+  version: 8d919cbe7e2627e417f3e45c3c0e489a5b7e2536
+- name: github.com/urfave/cli
+  version: 39908eb08fee7c10d842622a114a5c133fb0a3c6
+- name: golang.org/x/sys
+  version: 571f7bbbe08da2a8955aed9d4db316e78630e9a3
+  subpackages:
+  - unix
+- name: google.golang.org/appengine
+  version: 5bee14b453b4c71be47ec1781b0fa61c2ea182db
+  subpackages:
+  - cloudsql
+testImports: []
