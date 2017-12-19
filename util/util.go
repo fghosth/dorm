@@ -11,6 +11,42 @@ import (
 type Dstring struct {
 }
 
+//驼峰命名转下划线命名法
+func (ds *Dstring) CalToUnder(str string) string {
+	regstr := `[A-Z][a-z0-9]+` //所有大写字母开头的词
+	tmpstr := ""
+	r := regexp.MustCompile(regstr)
+	words := r.FindAllString(str, -1)
+	for _, v := range words {
+		if tmpstr == "" {
+			tmpstr = strings.ToLower(v)
+		} else {
+			tmpstr = tmpstr + "_" + strings.ToLower(v)
+		}
+
+	}
+	return tmpstr
+}
+
+//下划线分割命名法转驼峰命名法
+func (ds *Dstring) UnderToCal(str string) string {
+	dst := new(Dstring)
+	c := strings.Split(str, "_")
+	tmpstr := ""
+	for _, v := range c {
+		tmpstr = tmpstr + dst.FUpRLow(v)
+	}
+	return tmpstr
+}
+
+//单词转换首字母大写,其他都小写
+func (ds *Dstring) FUpRLow(str string) string {
+	str = strings.ToLower(str)
+	v := []byte(str)
+	v[0] -= 32
+	return string(v)
+}
+
 //获取``等符号中的内容
 func (ds *Dstring) PixContent(str string, symbol string) string {
 	reg := symbol + ".+" + symbol
