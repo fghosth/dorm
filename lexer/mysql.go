@@ -77,17 +77,37 @@ var (
 //根据struct生成数据库sql
 func (ml MysqlLexer) CreateSqlByStruct(obj interface{}) string {
 	var tableName, sql string
-	rtype := reflect.TypeOf(&obj).Elem()
+	flist := make([]string, 0)
+	rtype := reflect.TypeOf(obj).Elem()
 	tableName = rtype.Name()
 	for k := 0; k < rtype.NumField(); k++ {
 		colName := rtype.Field(k).Tag.Get("dormCol") //字段名
-		colType := rtype.Field(k).Tag.Get("dorm")
-		if rtype.Field(k).Tag.Get("dormCol") == v {
-			// fmt.Println(v, "------", rtype.Field(k).Tag.Get("dorm"))
-			tname = rtype.Field(k).Name
-			break
+		if colName == "" {                           //tag中没有就用字段名
+			colName = ut.CalToUnder(rtype.Field(k).Name)
 		}
+		colType := string(rtype.Field(1).Type.Kind().String())   //字段类型
+		colProperty := dormToSql(rtype.Field(k).Tag.Get("dorm")) //字段属性
+		tpms := "`" + colName + "` " + colType + " " + colProperty + ","
+		flist = append(flist, tpms)
 	}
+	tableName, _ = ut.FUPer(tableName)
+	ctx := map[string]interface{}{
+		"tableName": tableName,
+		"field":     flist,
+	}
+
+	sql, err := raymond.Render(MYSQL_SCRIPT_TMP, ctx)
+	if err != nil {
+		fmt.Println(err)
+	}
+	return sql
+}
+
+//处理属性转成sql语句能识别的字符串
+func dormToSql(dorm string) string {
+	sql := ""
+	sql = strings.Replace(dorm, ";", " ", -1)
+	sql = strings.Replace(sql, "-", " ", -1)
 	return sql
 }
 
@@ -150,7 +170,7 @@ func getColptyByLine(str string) []string {
 
 	for _, v := range ptylist {
 		if pty == "" {
-			pty = strings.Replace(v, " ", "_", -1)
+			pty = strings.Replace(v, " ", "-", -1)
 		} else {
 			pty = pty + "||" + strings.Replace(v, " ", "_", -1)
 

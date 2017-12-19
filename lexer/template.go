@@ -15,7 +15,7 @@ const (
    }
    `
 	MYSQL_SCRIPT_TMP = `
-	 CREATE TABLE ` + "{{{tableName}}}" + ` (
+	 CREATE TABLE ` + "`{{{tableName}}}`" + ` (
 		 {{#each field}}
  		{{{this}}}
  	   {{/each}}

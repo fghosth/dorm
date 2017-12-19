@@ -15,17 +15,23 @@ func init() {
 	sqlStr = mysqlLexer.SqlString("../orm.sql")
 }
 
-func TestCreateStruct(t *testing.T) {
-	// tools := new(util.Dstring)
-	// fmt.Println(tools.CalToUnder("User"))
-	str := mysqlLexer.CreateTableString(sqlStr)
-	for _, v := range str {
-		tname := mysqlLexer.TableName(v)
-		field := mysqlLexer.Field(v)
-		structStr := mysqlLexer.CreateStruct("usermodel", tname, field)
-		fmt.Println(structStr)
-	}
+func TestCreateSqlByStruct(t *testing.T) {
+	user := new(lexer.User)
+	str := mysqlLexer.CreateSqlByStruct(user)
+	fmt.Println(str)
 }
+
+// func TestCreateStruct(t *testing.T) {
+// 	// tools := new(util.Dstring)
+// 	// fmt.Println(tools.CalToUnder("User"))
+// 	str := mysqlLexer.CreateTableString(sqlStr)
+// 	for _, v := range str {
+// 		tname := mysqlLexer.TableName(v)
+// 		field := mysqlLexer.Field(v)
+// 		structStr := mysqlLexer.CreateStruct("usermodel", tname, field)
+// 		fmt.Println(structStr)
+// 	}
+// }
 
 // func TestField(t *testing.T) {
 // 	str := mysqlLexer.CreateTableString(sqlStr)
