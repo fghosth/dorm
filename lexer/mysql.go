@@ -32,7 +32,18 @@ var (
 )
 
 var (
-	TypeMap = map[string]string{
+	StructToMysqlMap = map[string]string{
+		"int":     "int",
+		"int8":    "tinyint",
+		"int16":   "smallint",
+		"int32":   "int",
+		"int64":   "bigint",
+		"string":  "varchar",
+		"float32": "float",
+		"float64": "double",
+		"[]byte":  "blob",
+	}
+	MysqlToStructMap = map[string]string{
 		"tinyint":    "int8",
 		"smallint":   "int16",
 		"mediumint":  "int32",
@@ -85,8 +96,9 @@ func (ml MysqlLexer) CreateSqlByStruct(obj interface{}) string {
 		if colName == "" {                           //tag中没有就用字段名
 			colName = ut.CalToUnder(rtype.Field(k).Name)
 		}
-		colType := string(rtype.Field(1).Type.Kind().String())   //字段类型
-		colProperty := dormToSql(rtype.Field(k).Tag.Get("dorm")) //字段属性
+
+		colType := StructToMysqlMap[string(rtype.Field(k).Type.Kind().String())] //字段类型
+		colProperty := dormToSql(rtype.Field(k).Tag.Get("dorm"))                 //字段属性
 		tpms := "`" + colName + "` " + colType + " " + colProperty + ","
 		flist = append(flist, tpms)
 	}
@@ -183,7 +195,7 @@ func getColptyByLine(str string) []string {
 func getColTypeByLine(str string) (sqltype, gotype string) {
 	r := regexp.MustCompile(sqlType)
 	sqltype = r.FindString(str)
-	gotype = TypeMap[sqltype]
+	gotype = MysqlToStructMap[sqltype]
 	return
 }
 
