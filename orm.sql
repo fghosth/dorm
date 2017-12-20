@@ -11,14 +11,14 @@ CREATE TABLE `user` (
 `name` varchar(64) NOT NULL,
 `gender` bit(1) NOT NULL,
 `password` varchar(255) NOT NULL,
-`qq` bit(255) NOT NULL,
+`qq` bit(8) NOT NULL,
 `account` char(255) NOT NULL,
 `cellphone` varchar(255) NOT NULL,
-`happy` enum('aaa','bbb','ccc','ddd') NOT NULL DEFAULT aaa,
+`happy` enum('aaa','bbb','ccc','ddd') NOT NULL DEFAULT 'aaa',
 `cash` double NOT NULL DEFAULT 0,
 `create_time` timestamp NOT NULL,
 `update_time` datetime NOT NULL,
-PRIMARY KEY (`uid`) ,
+PRIMARY KEY (`uid`)
 INDEX `dd` (`account` ASC) USING HASH
 );
 

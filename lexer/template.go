@@ -19,6 +19,7 @@ const (
 		 {{#each field}}
  		{{{this}}}
  	   {{/each}}
-	 ) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8 COMMENT='';
+		 {{{primaryKey}}}
+	 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COMMENT='';
 	`
 )
