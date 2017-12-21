@@ -110,7 +110,7 @@ func (ml CockDBLexer) CreateSqlByStruct(obj interface{}) string {
 		flist = append(flist, tpms)
 
 	}
-	tableName, _ = ut.FUPer(tableName)
+	tableName = ut.CalToUnder(tableName)
 	//根据模板生成
 	ctx := map[string]interface{}{
 		"tableName": tableName,

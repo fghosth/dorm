@@ -15,13 +15,13 @@ func init() {
 	cocksqlStr = cockDBlexer.SqlString("../cockroach.sql")
 }
 
-func TestCreateSqlByStruct(t *testing.T) {
+func TestCockCreateSqlByStruct(t *testing.T) {
 	obj := new(lexer.ProductInformation)
 	str := cockDBlexer.CreateSqlByStruct(obj)
 	fmt.Println(str)
 }
 
-// func TestCreateStruct(t *testing.T) {
+// func TestCockCreateStruct(t *testing.T) {
 // 	// tools := new(util.Dstring)
 // 	// fmt.Println(tools.CalToUnder("User"))
 // 	str := cockDBlexer.CreateTableString(cocksqlStr)
@@ -33,7 +33,7 @@ func TestCreateSqlByStruct(t *testing.T) {
 // 	}
 // }
 
-// func TestField(t *testing.T) {
+// func TestCockField(t *testing.T) {
 // 	str := cockDBlexer.CreateTableString(cocksqlStr)
 // 	for _, v := range str {
 // 		name := cockDBlexer.Field(v)
@@ -42,7 +42,7 @@ func TestCreateSqlByStruct(t *testing.T) {
 // }
 //
 //
-// func TestTableName(t *testing.T) {
+// func TestCockTableName(t *testing.T) {
 // 	str := cockDBlexer.CreateTableString(cocksqlStr)
 // 	for _, v := range str {
 // 		tname := cockDBlexer.TableName(v)

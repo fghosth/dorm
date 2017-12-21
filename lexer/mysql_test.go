@@ -1,6 +1,9 @@
 package lexer_test
 
 import (
+	"fmt"
+	"testing"
+
 	"jvole.com/createProject/lexer"
 )
 
@@ -12,11 +15,12 @@ func init() {
 	sqlStr = mysqlLexer.SqlString("../orm.sql")
 }
 
-// func TestCreateSqlByStruct(t *testing.T) {
-// 	user := new(lexer.User)
-// 	str := mysqlLexer.CreateSqlByStruct(user)
-// 	fmt.Println(str)
-// }
+func TestCreateSqlByStruct(t *testing.T) {
+	user := new(lexer.User)
+	str := mysqlLexer.CreateSqlByStruct(user)
+	fmt.Println(str)
+}
+
 //
 // func TestCreateStruct(t *testing.T) {
 // 	// tools := new(util.Dstring)
