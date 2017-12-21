@@ -13,7 +13,7 @@ import (
 
 var (
 	//匹配所有mysql变量 匹配完整单词 解决 同时出现datetime 和date的问题
-	sqlType = `\b(tinyint|smallint|mediumint|int|integer|bigint|date|datetime|time|bit|tinytext|mediumtext|longtext|text|tinyblob|mediumblob|longblob|blob|float|double|decimal|timestamp|year|char|varchar|varbinary|enum|set|json)\b\(.+\)|\b(tinyint|smallint|mediumint|int|integer|bigint|date|datetime|time|bit|tinytext|mediumtext|longtext|text|tinyblob|mediumblob|longblob|blob|float|double|decimal|timestamp|year|char|varchar|varbinary|enum|set|json)\b`
+	sqlType = `(?i)\b(tinyint|smallint|mediumint|int|integer|bigint|date|datetime|time|bit|tinytext|mediumtext|longtext|text|tinyblob|mediumblob|longblob|blob|float|double|decimal|timestamp|year|char|varchar|varbinary|enum|set|json)\b\(.+?\)|\b(tinyint|smallint|mediumint|int|integer|bigint|date|datetime|time|bit|tinytext|mediumtext|longtext|text|tinyblob|mediumblob|longblob|blob|float|double|decimal|timestamp|year|char|varchar|varbinary|enum|set|json)\b`
 	// tableName = "(?<=TABLE[\\s]{1,200}`).{1,}(?=`)"
 	//获取tablename所在行(?i)忽略大小写
 	tableNameLine = "(?i)(CREATE TABLE).+\\`"
@@ -22,13 +22,13 @@ var (
 	//匹配字段属性
 	property = `(?i)\b(NOT NULL|(DEFAULT.+)|AUTO_INCREMENT|unsigned|zerofill|COMMENT.+'|PRIMARY.+,)`
 	//找出所以cerate table代码段
-	createTable = `(CREATE TABLE)[\W\w]+?;`
+	createTable = `(?i)(CREATE TABLE)[\W\w]+?;`
 	//为创造table的语句按字段分行
 	colLine = `.+,`
 	//找到PRIMARY KEY行
 	primaryKeyLine = `(?i)(PRIMARY KEY).+`
 	//找到index 行TODO
-	indexLine = `(KEY).+`
+	indexLine = `(?i)(KEY).+`
 )
 
 var (
@@ -42,6 +42,7 @@ var (
 		"float32": "float",
 		"float64": "double",
 		"[]byte":  "blob",
+		"bool":    "bit",
 	}
 	MysqlToStructMap = map[string]string{
 		"tinyint":    "int8",
@@ -82,8 +83,8 @@ type MysqlLexer struct {
 
 var (
 	ut        = new(util.Dstring)
-	dat       []byte
-	splitFlag = "-" //在tag中标识类似commit-'用户id'的分隔符
+	dat       []byte //加载的文件
+	splitFlag = "-"  //在tag中标识类似commit-'用户id'的分隔符
 )
 
 //根据struct生成数据库sql
@@ -157,7 +158,7 @@ func (ml MysqlLexer) CreateStruct(packageName, tableName string, field []map[str
 		fstr = append(fstr, str)
 	}
 	ctx := map[string]interface{}{
-		"name":        ut.FUpRLow(tableName),
+		"name":        ut.UnderToCal(tableName),
 		"packageName": packageName,
 		"field":       fstr,
 	}

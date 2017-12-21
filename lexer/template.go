@@ -22,4 +22,11 @@ const (
 		 {{{primaryKey}}}
 	 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COMMENT='';
 	`
+	COCKROACH_SCRIPT_TMP = `
+	 CREATE TABLE IF NOT EXISTS {{{tableName}}} (
+		 {{#each field}}
+ 		{{{this}}}
+ 	   {{/each}}
+	 );
+	`
 )

@@ -8,94 +8,90 @@ import (
 	"strings"
 
 	"github.com/aymerick/raymond"
-	"jvole.com/createProject/util"
 )
 
 var (
 	//匹配所有mysql变量 匹配完整单词 解决 同时出现datetime 和date的问题
-	cockDBsqlType = `\b(tinyint|smallint|mediumint|int|integer|bigint|date|datetime|time|bit|tinytext|mediumtext|longtext|text|tinyblob|mediumblob|longblob|blob|float|double|decimal|timestamp|year|char|varchar|varbinary|enum|set|json)\b\(.+\)|\b(tinyint|smallint|mediumint|int|integer|bigint|date|datetime|time|bit|tinytext|mediumtext|longtext|text|tinyblob|mediumblob|longblob|blob|float|double|decimal|timestamp|year|char|varchar|varbinary|enum|set|json)\b`
+	cockDBsqlType = `(?i)\b(INT|INTEGER|INT8|INT64|BIGINT|INT4|INT2|SMALLINT|BIT|UUID|SERIAL|SMALLSERIAL|BIGSERIAL|DECIMAL|DEC|NUMERIC|FLOAT|DOUBLE PRECISION|FLOAT8|BOOLEAN|BOOL|DATE|TIMESTAMPTZ|TIMESTAMP|INTERVAL|STRING|CHARACTER|CHAR|VARCHAR|TEXT|COLLATE|BYTES|BYTEA|BLOB|ARRAY)\b\(.+?\)|\b(INT|INTEGER|INT8|INT64|BIGINT|INT4|INT2|SMALLINT|BIT|UUID|SERIAL|SMALLSERIAL|BIGSERIAL|DECIMAL|DEC|NUMERIC|FLOAT|DOUBLE PRECISION|FLOAT8|BOOLEAN|BOOL|DATE|TIMESTAMPTZ|TIMESTAMP|INTERVAL|STRING|CHARACTER|CHAR|VARCHAR|TEXT|COLLATE|BYTES|BYTEA|BLOB|ARRAY)\b`
 	// tableName = "(?<=TABLE[\\s]{1,200}`).{1,}(?=`)"
 	//获取tablename所在行(?i)忽略大小写
 	cockDBtableNameLine = "(?i)CREATE TABLE.+\\("
-	//匹配所有字段
-	cockDBcol = "`.+`"
-	//匹配字段属性
-	cockDBproperty = `(?i)\b(NOT NULL|(DEFAULT.+)|AUTO_INCREMENT|unsigned|zerofill|COMMENT.+'|PRIMARY.+,)`
+
+	//匹配用户自定义的表名，字段名等-----以小写字幕开头，包含大小写-_和数字的字符串
+	cockDBName = "[a-z][a-zA-Z\\d_-]+"
+	//保留关键字
+	cockDBKeyword = `(?i)\b(NOT NULL|DEFAULT|PRIMARY KEY|UNIQUE|CHECK|CONSTRAINT|INDEX|IF NOT EXISTS|SHOW|FROM|CREATE TABLE|DELETE|EXPLAIN|IMPORT|INSERT|SELECT|SHOW TRACE|TRUNCATE|UPDATE|UPSERT)`
 	//找出所以cerate table代码段
-	cockDBcreateTable = `(CREATE TABLE)[\W\w]+?;`
+	cockDBcreateTable = `(?i)(CREATE TABLE)[\W\w]+?;`
 	//为创造table的语句按字段分行
 	cockDBcolLine = `[a-zA-Z].+,\n`
 	//找到index 行TODO
-	indexLine = `INDEX.+`
+	cockDBindexLine = `(?i)INDEX.+`
 )
 
 var (
-	StructToMysqlMap = map[string]string{
-		"int":     "int",
-		"int8":    "tinyint",
-		"int16":   "smallint",
-		"int32":   "int",
-		"int64":   "bigint",
-		"string":  "varchar",
-		"float32": "float",
-		"float64": "double",
-		"[]byte":  "blob",
+	StructToCockDBMap = map[string]string{
+		"int":     "INT",
+		"int8":    "BIT",
+		"int16":   "INT2",
+		"int32":   "INT",
+		"int64":   "BIGINT",
+		"string":  "STRING",
+		"float32": "FLOAT",
+		"float64": "FLOAT",
+		"[]byte":  "BYTES",
+		"bool":    "BOOL",
 	}
-	MysqlToStructMap = map[string]string{
-		"tinyint":    "int8",
-		"smallint":   "int16",
-		"mediumint":  "int32",
-		"int":        "int32",
-		"integer":    "int32",
-		"bigint":     "int64",
-		"date":       "string",
-		"datetime":   "string",
-		"time":       "string",
-		"bit":        "int8",
-		"bool":       "int16",
-		"tinytext":   "string",
-		"mediumtext": "string",
-		"longtext":   "string",
-		"text":       "string",
-		"tinyblob":   "[]byte",
-		"mediumblob": "[]byte",
-		"longblob":   "[]byte",
-		"blob":       "[]byte",
-		"float":      "float32",
-		"double":     "float64",
-		"decimal":    "float64",
-		"timestamp":  "int32",
-		"year":       "string",
-		"char":       "string",
-		"varchar":    "string",
-		"varbinary":  "[]byte",
-		"enum":       "string",
-		"set":        "string",
-		"json":       "string",
+	CockdbToStructMap = map[string]string{
+		"INT":              "int64",
+		"INTEGER":          "int64",
+		"INT8":             "int64",
+		"INT64":            "int64",
+		"BIGINT":           "int64",
+		"INT4":             "int32",
+		"INT2":             "int16",
+		"BIT":              "int8",
+		"UUID":             "string",
+		"SERIAL":           "int64",
+		"SMALLSERIAL":      "int64",
+		"BIGSERIAL":        "int64",
+		"DECIMAL":          "float64",
+		"DEC":              "float64",
+		"NUMERIC":          "float64",
+		"FLOAT":            "float64",
+		"REAL":             "float64",
+		"FLOAT4":           "float64",
+		"DOUBLE PRECISION": "float64",
+		"FLOAT8":           "float64",
+		"BOOLEAN":          "bool",
+		"BOOL":             "bool",
+		"DATE":             "string",
+		"TIMESTAMP":        "int",
+		"TIMESTAMPTZ":      "int",
+		"INTERVAL":         "int",
+		"TEXT":             "string",
+		"VARCHAR":          "string",
+		"CHAR":             "string",
+		"CHARACTER":        "string",
+		"STRING":           "string",
+		"COLLATE":          "string",
+		"BLOB":             "[]byte",
+		"BYTEA":            "[]byte",
+		"BYTES":            "[]byte",
+		"ARRAY":            "string",
 	}
 )
 
-type MysqlLexer struct {
+type CockDBLexer struct {
 }
 
-var (
-	ut        = new(util.Dstring)
-	dat       []byte
-	splitFlag = "-" //在tag中标识类似commit-'用户id'的分隔符
-)
-
 //根据struct生成数据库sql
-func (ml MysqlLexer) CreateSqlByStruct(obj interface{}) string {
-	var tableName, sql, primaryKey string
+func (ml CockDBLexer) CreateSqlByStruct(obj interface{}) string {
+	var tableName, sql string
 	flist := make([]string, 0)
 	rtype := reflect.TypeOf(obj).Elem()
-	tableName = rtype.Name() //表明
-
+	tableName = rtype.Name()                //表明
 	for k := 0; k < rtype.NumField(); k++ { //遍历struct字段
-		primaryPOS := strings.Index(rtype.Field(k).Tag.Get("dorm"), "PRIMARY;")
-		if primaryPOS != -1 {
-			primaryKey = "PRIMARY KEY (`" + rtype.Field(k).Tag.Get("dormCol") + "`)" //primaryKey
-		}
 		colName := rtype.Field(k).Tag.Get("dormCol") //字段名
 		if colName == "" {                           //tag中没有就用字段名
 			colName = ut.CalToUnder(rtype.Field(k).Name)
@@ -104,10 +100,10 @@ func (ml MysqlLexer) CreateSqlByStruct(obj interface{}) string {
 		if colType == "" { //如果 没有tag则使用默认匹配map
 			colType = StructToMysqlMap[string(rtype.Field(k).Type.Kind().String())] //字段类型
 		}
-		colProperty := dormToSql(rtype.Field(k).Tag.Get("dorm")) //字段属性
-		tpms := "`" + colName + "` " + colType + " " + colProperty
+		colProperty := rtype.Field(k).Tag.Get("dorm") //字段属性
+		tpms := colName + " " + colType + " " + colProperty
 
-		if k < rtype.NumField()-1 || primaryKey != "" { //最后一句不加逗号，
+		if k < rtype.NumField()-1 { //最后一句不加逗号，
 			tpms = tpms + ","
 		}
 
@@ -117,45 +113,28 @@ func (ml MysqlLexer) CreateSqlByStruct(obj interface{}) string {
 	tableName, _ = ut.FUPer(tableName)
 	//根据模板生成
 	ctx := map[string]interface{}{
-		"tableName":  tableName,
-		"field":      flist,
-		"primaryKey": primaryKey,
+		"tableName": tableName,
+		"field":     flist,
 	}
 
-	sql, err := raymond.Render(MYSQL_SCRIPT_TMP, ctx)
+	sql, err := raymond.Render(COCKROACH_SCRIPT_TMP, ctx)
 	if err != nil {
 		fmt.Println(err)
 	}
 	return sql
 }
 
-//处理属性转成sql语句能识别的字符串
-func dormToSql(dorm string) string {
-	sql := ""
-	sql = strings.Replace(dorm, ";", " ", -1)
-	sql = strings.Replace(sql, splitFlag, " ", -1)
-	sql = strings.Replace(sql, "PRIMARY", " ", -1)
-	return sql
-}
-
 //创建struct字符串
-func (ml MysqlLexer) CreateStruct(packageName, tableName string, field []map[string]interface{}) string {
+func (ml CockDBLexer) CreateStruct(packageName, tableName string, field []map[string]interface{}) string {
 	var structString string
 	fstr := make([]string, 0)
 	for _, v := range field { //遍历字段
-		tmpstr := ""
-		for _, pv := range v["property"].([]string) { //dorm里面内容
-			if tmpstr == "" {
-				tmpstr = string(pv)
-			} else {
-				tmpstr = tmpstr + ";" + string(pv)
-			}
-		}
-		str := ut.UnderToCal(v["colName"].(string)) + " " + v["goType"].(string) + "  `dormCol:\"" + v["colName"].(string) + "\" " + "dormMysqlType:\"" + v["sqltype"].(string) + "\"" + " dorm:\"" + tmpstr + "\"`"
+
+		str := ut.UnderToCal(v["colName"].(string)) + " " + v["goType"].(string) + "  `dormCol:\"" + v["colName"].(string) + "\" " + "dormMysqlType:\"" + v["sqltype"].(string) + "\"" + " dorm:\"" + v["property"].(string) + "\"`"
 		fstr = append(fstr, str)
 	}
 	ctx := map[string]interface{}{
-		"name":        ut.FUpRLow(tableName),
+		"name":        ut.UnderToCal(tableName),
 		"packageName": packageName,
 		"field":       fstr,
 	}
@@ -168,20 +147,18 @@ func (ml MysqlLexer) CreateStruct(packageName, tableName string, field []map[str
 }
 
 //获取字段及字段熟悉map
-func (ml MysqlLexer) Field(tableStr string) []map[string]interface{} {
+func (ml CockDBLexer) Field(tableStr string) []map[string]interface{} {
 	field := make([]map[string]interface{}, 0)
-	r := regexp.MustCompile(colLine)
+	r := regexp.MustCompile(cockDBcolLine)
 	line := r.FindAllString(tableStr, -1)
-	mysqlLexer := new(MysqlLexer)
-	pk := mysqlLexer.Primarykey(tableStr)
 	for _, v := range line {
-		coln := getColnameByLine(v) //获取字段名
+		coln := getCockColnameByLine(v) //获取字段名
 
 		if coln != "" { //字段名不能为空 不是字段
 			colmap := make(map[string]interface{})
 			colmap["colName"] = coln
-			colmap["sqltype"], colmap["goType"] = getColTypeByLine(v)
-			colmap["property"] = getColptyByLine(v, pk)
+			colmap["sqltype"], colmap["goType"] = getCockColTypeByLine(v)
+			colmap["property"] = getCockColptyByLine(v)
 			field = append(field, colmap)
 
 		}
@@ -191,43 +168,38 @@ func (ml MysqlLexer) Field(tableStr string) []map[string]interface{} {
 }
 
 //根据行获取熟悉数组
-func getColptyByLine(str, pk string) []string {
+func getCockColptyByLine(str string) string {
 	pty := ""
-	r := regexp.MustCompile(property)
-	ptylist := r.FindAllString(str, -1)
-	if getColnameByLine(str) == pk {
-		pty = "PRIMARY"
+	r := regexp.MustCompile(cockDBsqlType)
+	str = strings.Replace(str, ",", "", -1)
+	tmp := r.FindString(str)
+	if tmp != "" {
+		ptyList := strings.Split(str, " "+tmp)
+		pty = ptyList[1]
 	}
-	for _, v := range ptylist {
+	// pp.Println(str, "+++++", tmp, "====", pty)
+	pty = strings.Replace(pty, "\n", "", -1)
 
-		if pty == "" {
-			pty = strings.Replace(v, " ", splitFlag, -1)
-		} else {
-			pty = pty + "||" + strings.Replace(v, " ", splitFlag, -1)
-		}
-	}
-
-	pty = strings.Replace(pty, ",", "", -1)
-	return strings.Split(pty, "||")
+	return strings.TrimLeft(pty, " ")
 }
 
 //根据行取出字段类型
-func getColTypeByLine(str string) (sqltype, gotype string) {
+func getCockColTypeByLine(str string) (sqltype, gotype string) {
 
-	r := regexp.MustCompile(sqlType)
+	r := regexp.MustCompile(cockDBsqlType)
 	sqltype = r.FindString(str)
 	r = regexp.MustCompile(`\(.+\)`)
 	tmap := r.ReplaceAllString(sqltype, "")
-	gotype = MysqlToStructMap[tmap]
+	gotype = CockdbToStructMap[tmap]
 	// pp.Println(gotype)
 	return
 }
 
 //根据行取出字段名 如果不是字段行返回""
-func getColnameByLine(str string) string {
+func getCockColnameByLine(str string) string {
 	colname := ""
 
-	isCol, err := regexp.MatchString(sqlType, str)
+	isCol, err := regexp.MatchString(cockDBsqlType, str)
 	if err != nil {
 		fmt.Println(err)
 	}
@@ -235,45 +207,37 @@ func getColnameByLine(str string) string {
 		return colname
 	}
 
-	r := regexp.MustCompile(col)
+	r := regexp.MustCompile(cockDBName)
 
-	line := r.FindString(str)
+	colname = r.FindString(str)
 
-	colname = ut.PixContent(line, "`")
 	return colname
 }
 
-//获取某一个table的primarykey
-func (ml MysqlLexer) Primarykey(tableStr string) string {
-	r := regexp.MustCompile(primaryKeyLine)
-	pline := r.FindString(tableStr)
-	pk := ut.PixContent(pline, "`")
-	return pk
+//获得tableName
+func (ml CockDBLexer) TableName(tableStr string) string {
+
+	r := regexp.MustCompile(cockDBtableNameLine)
+	tname := r.FindString(tableStr)
+	r = regexp.MustCompile(cockDBName)
+	tname = r.FindString(tname)
+	return tname
+}
+
+//获取createTable的字符串数组
+func (ml CockDBLexer) CreateTableString(sqlStr string) []string {
+
+	r := regexp.MustCompile(cockDBcreateTable)
+	str := r.FindAllString(sqlStr, -1)
+	return str
 }
 
 //获取sql脚本
-func (ml MysqlLexer) SqlString(file string) string {
+func (ml CockDBLexer) SqlString(file string) string {
 	var err error
 	dat, err = ioutil.ReadFile(file)
 	if err != nil {
 		fmt.Println(err)
 	}
-
 	return string(dat)
-}
-
-//获取createTable的字符串数组
-func (ml MysqlLexer) CreateTableString(sqlStr string) []string {
-
-	r := regexp.MustCompile(createTable)
-	str := r.FindAllString(sqlStr, -1)
-	return str
-}
-
-func (ml MysqlLexer) TableName(tableStr string) string {
-
-	r := regexp.MustCompile(tableNameLine)
-	tname := r.FindString(tableStr)
-	tname = ut.PixContent(tname, "`")
-	return tname
 }
