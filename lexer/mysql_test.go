@@ -15,11 +15,22 @@ func init() {
 	sqlStr = mysqlLexer.SqlString("../orm.sql")
 }
 
-func TestCreateSqlByStruct(t *testing.T) {
-	user := new(lexer.User)
-	str := mysqlLexer.CreateSqlByStruct(user)
-	fmt.Println(str)
+func TestCreateSqlByStructStr(t *testing.T) {
+	sl := new(lexer.StructLexer)
+	fileStr := sl.GetStructFile("../ormstruct/hs_auth_permission.go")
+	slist := sl.StructStr(fileStr)
+	for _, v := range slist {
+		str := mysqlLexer.CreateSqlByStructStr(v)
+		fmt.Println(str)
+	}
+
 }
+
+// func TestCreateSqlByStruct(t *testing.T) {
+// 	user := new(lexer.User)
+// 	str := mysqlLexer.CreateSqlByStruct(user)
+// 	fmt.Println(str)
+// }
 
 //
 // func TestCreateStruct(t *testing.T) {

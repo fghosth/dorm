@@ -84,10 +84,57 @@ type MysqlLexer struct {
 var (
 	ut        = new(util.Dstring)
 	dat       []byte //加载的文件
-	splitFlag = "-"  //在tag中标识类似commit-'用户id'的分隔符
+	splitFlag = " "  //在tag中标识类似commit-'用户id'的分隔符
 )
 
-//根据struct生成数据库sql
+//根据struct-字符串成数据库sql
+func (ml MysqlLexer) CreateSqlByStructStr(strStruct string) string {
+	sl := new(StructLexer)
+	var tableName, sql, primaryKey string
+	flist := make([]string, 0)
+
+	tableName = sl.StructName(strStruct) //表明
+	str := sl.FieldName(strStruct)
+	for k, v := range str { //遍历struct字段
+		tag := sl.Taglex(v["tag"])
+		primaryPOS := strings.Index(tag["dorm"], "PRIMARY;")
+		if primaryPOS != -1 {
+			primaryKey = "PRIMARY KEY (`" + tag["dormCol"] + "`)" //primaryKey
+		}
+		colName := tag["dormCol"] //字段名
+		if colName == "" {        //tag中没有就用字段名
+			colName = ut.CalToUnder(v["field"])
+		}
+		colType := tag["dormMysqlType"]
+		if colType == "" { //如果 没有tag则使用默认匹配map
+			colType = StructToMysqlMap[v["type"]] //字段类型
+		}
+		colProperty := dormToSql(tag["dorm"]) //字段属性
+		tpms := "`" + colName + "` " + colType + " " + colProperty
+
+		if k < len(str)-1 || primaryKey != "" { //最后一句不加逗号，
+			tpms = tpms + ","
+		}
+
+		flist = append(flist, tpms)
+
+	}
+	tableName = ut.CalToUnder(tableName)
+	//根据模板生成
+	ctx := map[string]interface{}{
+		"tableName":  tableName,
+		"field":      flist,
+		"primaryKey": primaryKey,
+	}
+
+	sql, err := raymond.Render(MYSQL_SCRIPT_TMP, ctx)
+	if err != nil {
+		fmt.Println(err)
+	}
+	return sql
+}
+
+//根据struct-go反射生成数据库sql
 func (ml MysqlLexer) CreateSqlByStruct(obj interface{}) string {
 	var tableName, sql, primaryKey string
 	flist := make([]string, 0)

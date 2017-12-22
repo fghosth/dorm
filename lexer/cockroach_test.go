@@ -15,11 +15,22 @@ func init() {
 	cocksqlStr = cockDBlexer.SqlString("../cockroach.sql")
 }
 
-func TestCockCreateSqlByStruct(t *testing.T) {
-	obj := new(lexer.ProductInformation)
-	str := cockDBlexer.CreateSqlByStruct(obj)
-	fmt.Println(str)
+func TestCockCreateSqlByStructStr(t *testing.T) {
+	sl := new(lexer.StructLexer)
+	fileStr := sl.GetStructFile("../ormstruct/product_information.go")
+	slist := sl.StructStr(fileStr)
+	for _, v := range slist {
+		str := cockDBlexer.CreateSqlByStructStr(v)
+		fmt.Println(str)
+	}
+
 }
+
+// func TestCockCreateSqlByStruct(t *testing.T) {
+// 	obj := new(lexer.ProductInformation)
+// 	str := cockDBlexer.CreateSqlByStruct(obj)
+// 	fmt.Println(str)
+// }
 
 // func TestCockCreateStruct(t *testing.T) {
 // 	// tools := new(util.Dstring)

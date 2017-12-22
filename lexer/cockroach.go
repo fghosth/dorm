@@ -19,8 +19,10 @@ var (
 
 	//匹配用户自定义的表名，字段名等-----以小写字幕开头，包含大小写-_和数字的字符串
 	cockDBName = "[a-z][a-zA-Z\\d_-]+"
+	//选中非字段行
+	cockDBNotField = `^\b(FAMILY|NOT NULL|DEFAULT|PRIMARY KEY|UNIQUE|CHECK|CONSTRAINT|INDEX|IF NOT EXISTS|SHOW|FROM|CREATE TABLE|DELETE|EXPLAIN|IMPORT|INSERT|SELECT|SHOW TRACE|TRUNCATE|UPDATE|UPSERT)`
 	//保留关键字
-	cockDBKeyword = `(?i)\b(NOT NULL|DEFAULT|PRIMARY KEY|UNIQUE|CHECK|CONSTRAINT|INDEX|IF NOT EXISTS|SHOW|FROM|CREATE TABLE|DELETE|EXPLAIN|IMPORT|INSERT|SELECT|SHOW TRACE|TRUNCATE|UPDATE|UPSERT)`
+	cockDBKeyword = `(?i)\b(FAMILY|NOT NULL|DEFAULT|PRIMARY KEY|UNIQUE|CHECK|CONSTRAINT|INDEX|IF NOT EXISTS|SHOW|FROM|CREATE TABLE|DELETE|EXPLAIN|IMPORT|INSERT|SELECT|SHOW TRACE|TRUNCATE|UPDATE|UPSERT)`
 	//找出所以cerate table代码段
 	cockDBcreateTable = `(?i)(CREATE TABLE)[\W\w]+?;`
 	//为创造table的语句按字段分行
@@ -85,7 +87,48 @@ var (
 type CockDBLexer struct {
 }
 
-//根据struct生成数据库sql
+//根据struct字符串生成数据库sql
+func (ml CockDBLexer) CreateSqlByStructStr(strStruct string) string {
+	sl := new(StructLexer)
+	var tableName, sql string
+	flist := make([]string, 0)
+	str := sl.FieldName(strStruct)
+	tableName = sl.StructName(strStruct) //表明
+	for k, v := range str {              //遍历struct字段
+		tag := sl.Taglex(v["tag"])
+		colName := tag["dormCol"] //字段名
+		if colName == "" {        //tag中没有就用字段名
+			colName = ut.CalToUnder(v["field"])
+		}
+		colType := tag["dormCOCKDBType"]
+		if colType == "" { //如果 没有tag则使用默认匹配map
+			colType = StructToMysqlMap[v["type"]] //字段类型
+		}
+		colProperty := tag["dorm"] //字段属性
+		tpms := colName + " " + colType + " " + colProperty
+
+		if k < len(str)-1 { //最后一句不加逗号，
+			tpms = tpms + ","
+		}
+
+		flist = append(flist, tpms)
+
+	}
+	tableName = ut.CalToUnder(tableName)
+	//根据模板生成
+	ctx := map[string]interface{}{
+		"tableName": tableName,
+		"field":     flist,
+	}
+
+	sql, err := raymond.Render(COCKROACH_SCRIPT_TMP, ctx)
+	if err != nil {
+		fmt.Println(err)
+	}
+	return sql
+}
+
+//根据struct-go反射生成数据库sql
 func (ml CockDBLexer) CreateSqlByStruct(obj interface{}) string {
 	var tableName, sql string
 	flist := make([]string, 0)
@@ -96,7 +139,7 @@ func (ml CockDBLexer) CreateSqlByStruct(obj interface{}) string {
 		if colName == "" {                           //tag中没有就用字段名
 			colName = ut.CalToUnder(rtype.Field(k).Name)
 		}
-		colType := rtype.Field(k).Tag.Get("dormMysqlType")
+		colType := rtype.Field(k).Tag.Get("dormCOCKDBType")
 		if colType == "" { //如果 没有tag则使用默认匹配map
 			colType = StructToMysqlMap[string(rtype.Field(k).Type.Kind().String())] //字段类型
 		}
@@ -130,7 +173,7 @@ func (ml CockDBLexer) CreateStruct(packageName, tableName string, field []map[st
 	fstr := make([]string, 0)
 	for _, v := range field { //遍历字段
 
-		str := ut.UnderToCal(v["colName"].(string)) + " " + v["goType"].(string) + "  `dormCol:\"" + v["colName"].(string) + "\" " + "dormMysqlType:\"" + v["sqltype"].(string) + "\"" + " dorm:\"" + v["property"].(string) + "\"`"
+		str := ut.UnderToCal(v["colName"].(string)) + " " + v["goType"].(string) + "  `dormCol:\"" + v["colName"].(string) + "\" " + "dormCOCKDBType:\"" + v["sqltype"].(string) + "\"" + " dorm:\"" + v["property"].(string) + "\"`"
 		fstr = append(fstr, str)
 	}
 	ctx := map[string]interface{}{
@@ -175,7 +218,9 @@ func getCockColptyByLine(str string) string {
 	tmp := r.FindString(str)
 	if tmp != "" {
 		ptyList := strings.Split(str, " "+tmp)
-		pty = ptyList[1]
+		if len(ptyList) > 1 {
+			pty = ptyList[1]
+		}
 	}
 	// pp.Println(str, "+++++", tmp, "====", pty)
 	pty = strings.Replace(pty, "\n", "", -1)
@@ -199,11 +244,12 @@ func getCockColTypeByLine(str string) (sqltype, gotype string) {
 func getCockColnameByLine(str string) string {
 	colname := ""
 
-	isCol, err := regexp.MatchString(cockDBsqlType, str)
+	isCol, err := regexp.MatchString(cockDBsqlType, str)     //是否包含字段类型
+	notField, err := regexp.MatchString(cockDBNotField, str) //是否包含保留关键字开头
 	if err != nil {
 		fmt.Println(err)
 	}
-	if !isCol {
+	if !isCol || notField {
 		return colname
 	}
 

@@ -2,120 +2,118 @@ package main
 
 import (
 	_ "database/sql"
+	"errors"
 	"fmt"
-	"reflect"
-	"strconv"
+	"os"
 
 	_ "github.com/go-sql-driver/mysql"
-	"github.com/k0kubun/pp"
 	"github.com/urfave/cli"
-	"jvole.com/createProject/model"
-)
-
-const (
-	COLTAG = "dormCol"
+	"jvole.com/createProject/lexer"
+	"jvole.com/createProject/util"
 )
 
 var (
-	sqlFind = `func (user User) Find(sql string, args ...interface{}) ([]User, error) { //如果使用u *user速度慢3倍
-		rows, err := Db.Query(sql, args...)
-		defer rows.Close()
-		if err != nil {
-			fmt.Println("sql open error ", err)
-		}
-		au := make([]User, 0) //0为可变数组长度
-		columns, _ := rows.Columns()
-		values := make([]interface{}, len(columns))
-		{{#each val}}
-		{{{this}}}
-	   {{/each}}
-		num := 0
-		for rows.Next() {
-			if num >= MAXROWS && MAXROWS != -1 {
-				break
-			}
-			rows.Scan(values...)
-			au = append(au, user)
-			num++
-		}
-		// pp.Println(au)
-
-		return au, nil
-	}`
+	ERRNOFILE   = errors.New("未指定sql文件：-f ./user.sql")
+	ERRNOSQL    = errors.New("未指定数据库类型:-d mysql(cockroach)")
+	structPath  = "./ormstruct/"
+	packageName = "ormstruct"
 )
 
 /*sadfa
  */
 func CstructFile(c *cli.Context) error {
-	// sql := "select cash,gender,create_time,payment,address,userid,name,card from user where userid = ?"
-	args := make([]interface{}, 1)
-	args[0] = "1"
-	user := new(model.User)
-	vala, sqlstr := structFieldString(user)
-	pp.Println(vala)
-	pp.Println(sqlstr)
-
-	// ctx := map[string]interface{}{
-	// 	"val": vala,
-	// }
-	// output, err := raymond.Render(sqlFind, ctx)
-	// pp.Println(output)
-	// pp.Println(sql)
-	// user.Find(sql, args...)
-
+	if c.String("cover") == "true" {
+		COVRE = true
+	} else {
+		COVRE = false
+	}
+	db := c.String("database")
+	sqlfile := c.String("file")
+	if db != "mysql" && db != "cockroach" {
+		fmt.Println("目前只支持mysql和cockroach")
+		return ERRNOFILE
+	}
+	if sqlfile == "" {
+		fmt.Println("您未指定sql文件")
+		return ERRNOSQL
+	}
+	if db == "mysql" {
+		return genStructByMysql(sqlfile)
+	}
+	if db == "cockroach" {
+		return genStructByCockroach(sqlfile)
+	}
 	return nil
 }
 
-//根据数据库中的字段对应struct字段,sqlstr
-func structFieldString(obj interface{}) ([]interface{}, string) {
-	sqlStr := "" //sql需查出的字段
-	rtype := reflect.TypeOf(obj).Elem()
-	// sname, _ := ut.FUPer(rtype.Name())
+//根据cockroach脚本生成struct
+func genStructByCockroach(sqlfile string) error {
+	cockDBlexer := new(lexer.CockDBLexer)
+	cocksqlStr := cockDBlexer.SqlString(sqlfile)
 
-	sql := "select * from " + model.TABLE + " limit 1"
-	rows, err := model.Db.Query(sql)
-	if err != nil {
-		fmt.Println("sql open error ", err)
-	}
-	columns, _ := rows.Columns()
-	values := make([]interface{}, len(columns))
-	// reflectStruct := reflect.ValueOf(obj).Elem()
+	str := cockDBlexer.CreateTableString(cocksqlStr)
+	os.Mkdir(structPath, os.ModePerm) //在当前目录下生成md目录
 
-	for i, v := range columns {
-		tname := ""
-		// fmt.Println(rtype.NumField())
-		for k := 0; k < rtype.NumField(); k++ {
-			if rtype.Field(k).Tag.Get(COLTAG) == v {
-				// fmt.Println(v, "------", rtype.Field(k).Tag.Get("dorm"))
-				tname = rtype.Field(k).Name
-				break
-			}
+	for _, v := range str {
+		tname := cockDBlexer.TableName(v)
+		field := cockDBlexer.Field(v)
+		structStr := cockDBlexer.CreateStruct(packageName, tname, field)
+		//生成文件
+		fileName := tname + ".go"
+		exist, err := ut.FileOrPathExists(structPath + fileName)
+		if !COVRE && exist {
+			fmt.Println(util.Red(structPath + fileName + "文件已存在"))
+			// return err
 		}
-
-		// tagn := rtype.Field(i).Tag.Get("bson")
-		if tname != "" {
-			// fmt.Println(tname, "===", v)
-			if sqlStr == "" { //sql需查出的字段
-				sqlStr = v
-			} else {
-				sqlStr = sqlStr + "," + v
-			}
-			values[i] = "values[" + strconv.Itoa(i) + "]=&" + model.TABLE + "." + tname
+		sf, err := os.Create(structPath + fileName)
+		if err != nil {
+			fmt.Println(err)
+			return err
+		}
+		_, err = sf.Write([]byte(structStr))
+		if err != nil {
+			fmt.Println(err)
+			return err
+		}
+		// pp.Println(err)
+		if !(!COVRE && exist) && err == nil {
+			fmt.Println(structPath + fileName + "生成成功")
 		}
 	}
-	return values, sqlStr
+	return nil
 }
 
-// func test() error {
-// 	sql := "select cash,gender,create_time,payment,address,userid,name,card from user"
-// 	args := make([]interface{}, 0)
-// 	// args[0] = "1"
-// 	user := new(model.User)
-// 	ulist, err := user.Find(sql, args...)
-// 	if err != nil {
-// 		fmt.Println(err)
-// 		return err
-// 	}
-// 	pp.Println(ulist)
-// 	return nil
-// }
+//根据mysql脚本生成struct
+func genStructByMysql(sqlfile string) error {
+	mysqlLexer := new(lexer.MysqlLexer)
+	sqlStr := mysqlLexer.SqlString(sqlfile)
+	str := mysqlLexer.CreateTableString(sqlStr)
+	os.Mkdir(structPath, os.ModePerm) //在当前目录下生成md目录
+
+	for _, v := range str {
+		tname := mysqlLexer.TableName(v)
+		field := mysqlLexer.Field(v)
+		structStr := mysqlLexer.CreateStruct(packageName, tname, field)
+		//生成文件
+		fileName := tname + ".go"
+		exist, err := ut.FileOrPathExists(structPath + fileName)
+		if !COVRE && exist {
+			fmt.Println(util.Red(structPath + fileName + "文件已存在"))
+			// return err
+		}
+		sf, err := os.Create(structPath + fileName)
+		if err != nil {
+			fmt.Println(err)
+			return err
+		}
+		_, err = sf.Write([]byte(structStr))
+		if err != nil {
+			fmt.Println(err)
+			return err
+		}
+		if !(!COVRE && exist) && err == nil {
+			fmt.Println(structPath + fileName + "生成成功")
+		}
+	}
+	return nil
+}

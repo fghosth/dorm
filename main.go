@@ -70,9 +70,19 @@ func main() {
 					Value: "mysql",
 					Usage: "需生成的数据库脚本.可选值：mysql，Cockroach",
 				},
+				cli.StringFlag{
+					Name:  "file, f",
+					Value: "",
+					Usage: "struct文件.",
+				},
+				cli.StringFlag{
+					Name:  "cover",
+					Value: "false",
+					Usage: "是否覆盖已有文件，默认值false.可选值：true，false",
+				},
 			},
 			Action: func(c *cli.Context) error {
-				fmt.Println("completed task: ", c.Args().First())
+				fmt.Println("开发中。。。。 ", c.Args().First())
 				return nil
 			},
 		},
@@ -80,17 +90,22 @@ func main() {
 		{
 			Name:    "createstruct",
 			Aliases: []string{"cst"},
-			Usage:   "根据数据库生成struct。支持mysql，Cockroach",
+			Usage:   "根据数据库脚本生成struct。支持mysql，Cockroach",
 			Flags: []cli.Flag{
 				cli.StringFlag{
 					Name:  "database, d",
 					Value: "mysql",
-					Usage: "要连接的数据库.可选值：mysql，Cockroach",
+					Usage: "选择数据类型.可选值：mysql，Cockroach",
 				},
 				cli.StringFlag{
-					Name:  "link, l",
+					Name:  "file, f",
 					Value: "",
-					Usage: "数据库连接.",
+					Usage: "sql文件.",
+				},
+				cli.StringFlag{
+					Name:  "cover",
+					Value: "false",
+					Usage: "是否覆盖已有文件，默认值false.可选值：true，false",
 				},
 			},
 			Action: func(c *cli.Context) error {

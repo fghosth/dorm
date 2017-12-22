@@ -1,27 +1,32 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
-	"reflect"
+
+	"github.com/urfave/cli"
 )
 
-func CsqlFile() {
-	type User struct {
-		UserId   int    `json:"user_id" bson:"user_id"`
-		UserName string `json:"user_name" bson:"user_name"`
+func CsqlFile(c *cli.Context) error {
+	if c.String("cover") == "true" {
+		COVRE = true
+	} else {
+		COVRE = false
 	}
-	// 输出json格式
-	u := &User{UserId: 1, UserName: "tony"}
-	j, _ := json.Marshal(u)
-	fmt.Println(string(j))
-	// 输出内容：{"user_id":1,"user_name":"tony"}
-
-	// 获取tag中的内容
-	t := reflect.TypeOf(u)
-	field := t.Elem().Field(0)
-	fmt.Println(field.Tag.Get("json"))
-	// 输出：user_id
-	fmt.Println(field.Tag.Get("bson"))
-	// 输出：user_id
+	db := c.String("database")
+	sqlfile := c.String("file")
+	if db != "mysql" && db != "cockroach" {
+		fmt.Println("目前只支持mysql和cockroach")
+		return ERRNOFILE
+	}
+	if sqlfile == "" {
+		fmt.Println("您未指定struct文件")
+		return ERRNOSQL
+	}
+	if db == "mysql" {
+		return genStructByMysql(sqlfile)
+	}
+	if db == "cockroach" {
+		return genStructByCockroach(sqlfile)
+	}
+	return nil
 }
