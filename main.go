@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"os"
 	"time"
 
@@ -82,8 +81,7 @@ func main() {
 				},
 			},
 			Action: func(c *cli.Context) error {
-				fmt.Println("开发中。。。。 ", c.Args().First())
-				return nil
+				return CsqlFile(c)
 			},
 		},
 
