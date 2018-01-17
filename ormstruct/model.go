@@ -1,21 +1,42 @@
 package ormstruct
 
+import (
+	"database/sql"
+	"fmt"
+	"log"
+)
+
+const (
+	LIMIT   = 500  //默认查询条数限制
+	OFFSET  = 0    //默认位置
+	MAXROWS = 1000 //最多查出多少条,-1为不限制
+)
+
+var DB *sql.DB //数据库连接
+var Beforefun Before
+var Afterfun After
+
+/*
+模型的基本方法接口
+*/
 type Model interface {
 	/*
 			   根据条件查找结果集
 			   @parm sql 除去select xxx,xxx from tablename 之后的东西
 			   @parm value sql中?值 可以为空
+			   @parm limit 显示数量
+			   @parm offset 数据位置0开始
 		     @return struct 集合
 		     @return error 错误
 	*/
-	Select(sql string, value ...string) ([]interface{}, error)
+	Select(sql string, limit, offset int, value ...interface{}) ([]interface{}, error)
 	/*
 			   根据主键查找
 			   @parm id 主键
 		     @return struct
 		     @return error 错误
 	*/
-	FindById(id string) (interface{}, error)
+	FindByID(id string) (interface{}, error)
 	/*
 			   根据自身struct内容添加
 			   @parm
@@ -62,5 +83,110 @@ type Model interface {
 	Exec(sql string, value ...string) error
 }
 
-type BeforeSelect []func()
-type AfterSelect []func()
+/*
+获取不同类型数据库连接，支持mysql，mariadb，cockroachDB
+*/
+func SetConn(db, str string) {
+	var err error
+	switch db {
+	case "mysql":
+		DB, err = sql.Open("mysql", str)
+		if err != nil {
+			log.Fatal("error connecting to the database: ", err)
+		}
+	case "mariadb":
+		DB, err = sql.Open("mysql", str)
+		if err != nil {
+			log.Fatal("error connecting to the database: ", err)
+		}
+	case "cockroachDB":
+		DB, err = sql.Open("postgres", str)
+		if err != nil {
+			log.Fatal("error connecting to the database: ", err)
+		}
+	}
+
+}
+func Checkerr(err error) {
+	if err != nil {
+		fmt.Println(err)
+	}
+}
+
+//hooks前置方法
+type Before struct {
+	Select      []func()
+	Update      []func()
+	FindByID    []func()
+	Add         []func()
+	AddBatch    []func()
+	UpdateBatch []func()
+	Delete      []func()
+	DeleteBatch []func()
+	Exec        []func()
+}
+
+func AddBeforeFun(f func(), w string) bool {
+	success := true
+	switch w {
+	case "Select":
+		Beforefun.Select = append(Beforefun.Select, f)
+	case "Update":
+		Beforefun.Update = append(Beforefun.Update, f)
+	case "FindByID":
+		Beforefun.FindByID = append(Beforefun.FindByID, f)
+	case "Add":
+		Beforefun.Add = append(Beforefun.Add, f)
+	case "AddBatch":
+		Beforefun.AddBatch = append(Beforefun.AddBatch, f)
+	case "UpdateBatch":
+		Beforefun.UpdateBatch = append(Beforefun.UpdateBatch, f)
+	case "Delete":
+		Beforefun.Delete = append(Beforefun.Delete, f)
+	case "DeleteBatch":
+		Beforefun.DeleteBatch = append(Beforefun.DeleteBatch, f)
+	case "Exec":
+		Beforefun.Exec = append(Beforefun.Exec, f)
+	}
+
+	return success
+}
+
+//hooks后置方法
+type After struct {
+	Select      []func()
+	Update      []func()
+	FindByID    []func()
+	Add         []func()
+	AddBatch    []func()
+	UpdateBatch []func()
+	Delete      []func()
+	DeleteBatch []func()
+	Exec        []func()
+}
+
+func AddAfterFun(f func(), w string) bool {
+	success := true
+	switch w {
+	case "Select":
+		Afterfun.Select = append(Afterfun.Select, f)
+	case "Update":
+		Afterfun.Update = append(Afterfun.Update, f)
+	case "FindByID":
+		Afterfun.FindByID = append(Afterfun.FindByID, f)
+	case "Add":
+		Afterfun.Add = append(Afterfun.Add, f)
+	case "AddBatch":
+		Afterfun.AddBatch = append(Afterfun.AddBatch, f)
+	case "UpdateBatch":
+		Afterfun.UpdateBatch = append(Afterfun.UpdateBatch, f)
+	case "Delete":
+		Afterfun.Delete = append(Afterfun.Delete, f)
+	case "DeleteBatch":
+		Afterfun.DeleteBatch = append(Afterfun.DeleteBatch, f)
+	case "Exec":
+		Afterfun.Exec = append(Afterfun.Exec, f)
+	}
+
+	return success
+}

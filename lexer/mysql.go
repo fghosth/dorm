@@ -67,7 +67,7 @@ var (
 		"float":      "float32",
 		"double":     "float64",
 		"decimal":    "float64",
-		"timestamp":  "int32",
+		"timestamp":  "string",
 		"year":       "string",
 		"char":       "string",
 		"varchar":    "string",
@@ -217,7 +217,7 @@ func (ml MysqlLexer) CreateStruct(packageName, tableName string, field []map[str
 	return structString
 }
 
-//获取字段及字段熟悉map
+//获取字段及字段属性map
 func (ml MysqlLexer) Field(tableStr string) []map[string]interface{} {
 	field := make([]map[string]interface{}, 0)
 	r := regexp.MustCompile(colLine)
