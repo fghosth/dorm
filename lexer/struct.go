@@ -9,7 +9,7 @@ import (
 
 var (
 	//所有struct体字符串
-	structStr = `type[\w\W]+?}`
+	structStr = `type[\w\W]+?struct[\w\W]+?}`
 	//type定义struct到{位子的字符串
 	typeStructStr = `type.+{`
 	//所有成员变量行

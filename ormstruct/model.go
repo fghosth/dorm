@@ -16,6 +16,10 @@ var DB *sql.DB //数据库连接
 var Beforefun Before
 var Afterfun After
 
+func init() {
+	SetConn("mysql", "root:@tcp(localhost:3306)/praise_auth?charset=utf8")
+}
+
 /*
 模型的基本方法接口
 */
@@ -53,9 +57,10 @@ type Model interface {
 	/*
 			   根据自身struct更新
 			   @parm
+		     @return int64 修改记录的id
 		     @return error 错误
 	*/
-	Update() error
+	Update() (int64, error)
 	/*
 			   批量更新
 			   @parm struct数组
@@ -65,22 +70,24 @@ type Model interface {
 	/*
 			   根据自身struct删除
 			   @parm
+		     @return int64 影响行数
 		     @return error 错误
 	*/
-	Delete() error
+	Delete() (int64, error)
 	/*
 			   批量删除
-			   @parm sql sql语句，valuesql语句中?的部分，可以为空
+			   @parm struct struct数组
 		     @return error 错误
 	*/
 
-	DeleteBatch(sql string, value ...string) error
+	DeleteBatch(obj []interface{}) error
 	/*
 			   执行sql语句 非查询的语句
 			   @parm sql sql语句，valuesql语句中?的部分，可以为空
+		     @return int64 影响的行数
 		     @return error 错误
 	*/
-	Exec(sql string, value ...string) error
+	Exec(sql string, value ...interface{}) (int64, error)
 }
 
 /*
@@ -107,10 +114,12 @@ func SetConn(db, str string) {
 	}
 
 }
-func Checkerr(err error) {
+func Checkerr(err error) error {
 	if err != nil {
 		fmt.Println(err)
+		return err
 	}
+	return nil
 }
 
 //hooks前置方法

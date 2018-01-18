@@ -3,12 +3,21 @@ package util
 import (
 	// "fmt"
 	"errors"
+	"fmt"
 	"os"
 	"regexp"
 	"strings"
 )
 
 type Dstring struct {
+}
+
+func (ds *Dstring) Checkerr(err error) error {
+	if err != nil {
+		fmt.Println(err)
+		return err
+	}
+	return nil
 }
 
 //驼峰命名转下划线命名法
