@@ -36,14 +36,14 @@ type Model interface {
 		     @return struct
 		     @return error 错误
 	*/
-	FindByID(id string) (interface{}, error)
+	FindByID(id int64) (interface{}, error)
 	/*
 			   根据自身struct内容添加
 			   @parm
 		     @return 返回主键id
 		     @return error 错误
 	*/
-	Add() (string, error)
+	Add() (int64, error)
 	/*
 			   批量添加
 			   @parm struct数组
