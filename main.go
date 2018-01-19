@@ -62,12 +62,12 @@ func main() {
 		{
 			Name:    "createsql",
 			Aliases: []string{"cs"},
-			Usage:   "根据struct生成sql脚本。支持mysql，Cockroach",
+			Usage:   "根据struct生成sql脚本。支持mysql，cockroach",
 			Flags: []cli.Flag{
 				cli.StringFlag{
 					Name:  "database, d",
 					Value: "mysql",
-					Usage: "需生成的数据库脚本.可选值：mysql，Cockroach",
+					Usage: "需生成的数据库脚本.可选值：mysql，cockroach",
 				},
 				cli.StringFlag{
 					Name:  "file, f",
@@ -87,12 +87,12 @@ func main() {
 		{
 			Name:    "createmodel",
 			Aliases: []string{"cm"},
-			Usage:   "根据struct生成model。包括基础的增删改查，并映射到struct。支持mysql，Cockroach",
+			Usage:   "根据struct生成model。包括基础的增删改查，并映射到struct。支持mysql，cockroach",
 			Flags: []cli.Flag{
 				cli.StringFlag{
 					Name:  "database, d",
 					Value: "mysql",
-					Usage: "需支持的数据库脚本.可选值：mysql，Cockroach",
+					Usage: "需支持的数据库脚本.可选值：mysql，cockroach",
 				},
 				cli.StringFlag{
 					Name:  "file, f",
@@ -112,12 +112,12 @@ func main() {
 		{
 			Name:    "createstruct",
 			Aliases: []string{"cst"},
-			Usage:   "根据数据库脚本生成struct。支持mysql，Cockroach",
+			Usage:   "根据数据库脚本生成struct。支持mysql，cockroach",
 			Flags: []cli.Flag{
 				cli.StringFlag{
 					Name:  "database, d",
 					Value: "mysql",
-					Usage: "选择数据类型.可选值：mysql，Cockroach",
+					Usage: "选择数据类型.可选值：mysql，cockroach",
 				},
 				cli.StringFlag{
 					Name:  "file, f",

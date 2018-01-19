@@ -20,7 +20,7 @@ func TestAAExec(t *testing.T) {
 	ormstruct.AddAfterFun(func() { fmt.Println("Exec==============after") }, "Exec")
 	ormstruct.AddAfterFun(func() { fmt.Println("Exec=======dd=======after") }, "Exec")
 	args := make([]interface{}, 1)
-	args[0] = 1
+	args[0] = 315583830360326145
 	res, err := hsAuthRecords.Exec("update hs_auth_application set status_at=0 where id=?", args...)
 	Checkerr(err)
 	pp.Println(res)
@@ -100,32 +100,32 @@ func TestAAUpdate(t *testing.T) {
 	pp.Println(res)
 }
 
-func TestAAAddBatch(t *testing.T) {
-	hsAuthRecords := ormstruct.NewHsAuthApplication()
-	ormstruct.AddBeforeFun(func() { fmt.Println("AddBatch----before") }, "AddBatch")
-	ormstruct.AddBeforeFun(func() { fmt.Println("AddBatch==============before") }, "AddBatch")
-	ormstruct.AddAfterFun(func() { fmt.Println("AddBatch======end========after") }, "AddBatch")
-	ormstruct.AddAfterFun(func() { fmt.Println("AddBatch========endddd======after") }, "AddBatch")
-	ha := make([]interface{}, 100)
-	for i := 0; i < 100; i++ {
-		ar := ormstruct.HsAuthApplication{}
-		ar.SecretKey = "adfwerqer" + strconv.Itoa(i)
-		ar.AppKey = "1234123" + strconv.Itoa(i)
-		ar.Name = "sd" + strconv.Itoa(i)
-		ar.Ip = "192.143.11.11"
-		ar.Exp = "3"
-		ar.Type = 1
-		ar.CreatedAt = "2001-01-14"
-		ar.UpdatedAt = "2001-01-14"
-		ar.DeletedAt = "2001-01-14"
-		ar.StatusAt = 1
-		ha[i] = ar
-	}
-	err := hsAuthRecords.AddBatch(ha)
-	Checkerr(err)
-
-	pp.Println(hsAuthRecords.GetSql())
-}
+// func TestAAAddBatch(t *testing.T) {
+// 	hsAuthRecords := ormstruct.NewHsAuthApplication()
+// 	ormstruct.AddBeforeFun(func() { fmt.Println("AddBatch----before") }, "AddBatch")
+// 	ormstruct.AddBeforeFun(func() { fmt.Println("AddBatch==============before") }, "AddBatch")
+// 	ormstruct.AddAfterFun(func() { fmt.Println("AddBatch======end========after") }, "AddBatch")
+// 	ormstruct.AddAfterFun(func() { fmt.Println("AddBatch========endddd======after") }, "AddBatch")
+// 	ha := make([]interface{}, 100)
+// 	for i := 0; i < 100; i++ {
+// 		ar := ormstruct.HsAuthApplication{}
+// 		ar.SecretKey = "adfwerqer" + strconv.Itoa(i)
+// 		ar.AppKey = "1234123" + strconv.Itoa(i)
+// 		ar.Name = "sd" + strconv.Itoa(i)
+// 		ar.Ip = "192.143.11.11"
+// 		ar.Exp = "3"
+// 		ar.Type = 1
+// 		ar.CreatedAt = "2001-01-14"
+// 		ar.UpdatedAt = "2001-01-14"
+// 		ar.DeletedAt = "2001-01-14"
+// 		ar.StatusAt = 1
+// 		ha[i] = ar
+// 	}
+// 	err := hsAuthRecords.AddBatch(ha)
+// 	Checkerr(err)
+//
+// 	pp.Println(hsAuthRecords.GetSql())
+// }
 
 func TestAASelect(t *testing.T) {
 	ar := ormstruct.NewHsAuthApplication()
@@ -149,7 +149,7 @@ func TestAAFindByID(t *testing.T) {
 	ormstruct.AddAfterFun(func() { fmt.Println("FindByID==============after") }, "FindByID")
 	ormstruct.AddAfterFun(func() { fmt.Println("FindByID=======dd=======after") }, "FindByID")
 
-	result, err := ar.FindByID(20)
+	result, err := ar.FindByID(315583830360326145)
 	Checkerr(err)
 	pp.Println(result)
 	pp.Println(ar.GetSql())

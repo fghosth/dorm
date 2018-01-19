@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
+	// _ "github.com/lib/pq"
 )
 
 const (
@@ -17,7 +18,8 @@ var Beforefun Before
 var Afterfun After
 
 func init() {
-	SetConn("mysql", "root:@tcp(localhost:3306)/praise_auth?charset=utf8")
+	// SetConn("mysql", "root:@tcp(localhost:3306)/praise_auth?charset=utf8")
+	SetConn("cockroachDB", "postgresql://derek:123456@localhost:26257/auth?sslmode=disable")
 }
 
 /*
@@ -109,7 +111,7 @@ func SetConn(db, str string) {
 	case "cockroachDB":
 		DB, err = sql.Open("postgres", str)
 		if err != nil {
-			log.Fatal("error connecting to the database: ", err)
+			log.Fatal("数据库连接错误: ", err)
 		}
 	}
 

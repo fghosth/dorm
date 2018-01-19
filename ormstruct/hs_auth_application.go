@@ -5,7 +5,9 @@ import (
 	"log"
 	"strconv"
 
-	_ "github.com/go-sql-driver/mysql"
+	// _ "github.com/go-sql-driver/mysql"
+	"github.com/k0kubun/pp"
+	_ "github.com/lib/pq"
 )
 
 var sqlHsAuthApplication string
@@ -167,6 +169,7 @@ func (hsAuthApplication HsAuthApplication) Add() (int64, error) {
 
 	sqlHsAuthApplication = sqlstr
 	argsHsAuthApplication = args
+	pp.Println(hsAuthApplication.GetSql())
 	result, err := stmtIns.Exec(args...)
 	Checkerr(err)
 	for i := 0; i < len(Afterfun.Add); i++ { //后置hooks
@@ -337,15 +340,19 @@ func (hsAuthApplication HsAuthApplication) Exec(sql string, value ...interface{}
 	for i := 0; i < len(Beforefun.Exec); i++ { //前置hooks
 		Beforefun.Exec[i]()
 	}
-
+	if _, err := DB.Exec(
+		"CREATE TABLE IF NOT EXISTS accounts (id INT PRIMARY KEY, balance INT)"); err != nil {
+		log.Fatal(err)
+	}
 	stmt, err := DB.Prepare(sql)
 	Checkerr(err)
 
 	sqlHsAuthApplication = sql
 	argsHsAuthApplication = value
 	defer stmt.Close()
-	result, err := stmt.Exec(value...)
 
+	result, err := stmt.Exec(value...)
+	pp.Println(hsAuthApplication.GetSql())
 	Checkerr(err)
 	for i := 0; i < len(Afterfun.Exec); i++ { //后置hooks
 		Afterfun.Exec[i]()

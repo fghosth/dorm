@@ -5,7 +5,9 @@ import (
 	"log"
 	"strconv"
 
-	_ "github.com/go-sql-driver/mysql"
+	// _ "github.com/go-sql-driver/mysql"
+
+	_ "github.com/lib/pq"
 )
 
 var sqlHsAuthRecords string

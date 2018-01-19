@@ -105,35 +105,35 @@ func TestARUpdate(t *testing.T) {
 	pp.Println(res)
 }
 
-func TestARAddBatch(t *testing.T) {
-	hsAuthRecords := ormstruct.NewHsAuthRecords()
-	ormstruct.AddBeforeFun(func() { fmt.Println("AddBatch----before") }, "AddBatch")
-	ormstruct.AddBeforeFun(func() { fmt.Println("AddBatch==============before") }, "AddBatch")
-	ormstruct.AddAfterFun(func() { fmt.Println("AddBatch======end========after") }, "AddBatch")
-	ormstruct.AddAfterFun(func() { fmt.Println("AddBatch========endddd======after") }, "AddBatch")
-	ha := make([]interface{}, 100)
-	for i := 0; i < 100; i++ {
-		ar := ormstruct.HsAuthRecords{}
-		ar.SecretKey = "adfwerqer" + strconv.Itoa(i)
-		ar.AppKey = "1234123fsdfasdf" + strconv.Itoa(i)
-		ar.Sign = "sdafsadf23423" + strconv.Itoa(i)
-		ar.Token = "sdfasdfwer" + strconv.Itoa(i)
-		ar.Alg = "sdf" + strconv.Itoa(i)
-		ar.Ip = "192.143.11.11"
-		ar.Exp = "2001-01-14"
-		ar.Iat = "2001-01-14"
-		ar.Type = 1
-		ar.CreatedAt = "2001-01-14"
-		ar.UpdatedAt = "2001-01-14"
-		ar.DeletedAt = "2001-01-14"
-		ar.StatusAt = 1
-		ha[i] = ar
-	}
-	err := hsAuthRecords.AddBatch(ha)
-	Checkerr(err)
-
-	pp.Println(hsAuthRecords.GetSql())
-}
+// func TestARAddBatch(t *testing.T) {
+// 	hsAuthRecords := ormstruct.NewHsAuthRecords()
+// 	ormstruct.AddBeforeFun(func() { fmt.Println("AddBatch----before") }, "AddBatch")
+// 	ormstruct.AddBeforeFun(func() { fmt.Println("AddBatch==============before") }, "AddBatch")
+// 	ormstruct.AddAfterFun(func() { fmt.Println("AddBatch======end========after") }, "AddBatch")
+// 	ormstruct.AddAfterFun(func() { fmt.Println("AddBatch========endddd======after") }, "AddBatch")
+// 	ha := make([]interface{}, 100)
+// 	for i := 0; i < 100; i++ {
+// 		ar := ormstruct.HsAuthRecords{}
+// 		ar.SecretKey = "adfwerqer" + strconv.Itoa(i)
+// 		ar.AppKey = "1234123fsdfasdf" + strconv.Itoa(i)
+// 		ar.Sign = "sdafsadf23423" + strconv.Itoa(i)
+// 		ar.Token = "sdfasdfwer" + strconv.Itoa(i)
+// 		ar.Alg = "sdf" + strconv.Itoa(i)
+// 		ar.Ip = "192.143.11.11"
+// 		ar.Exp = "2001-01-14"
+// 		ar.Iat = "2001-01-14"
+// 		ar.Type = 1
+// 		ar.CreatedAt = "2001-01-14"
+// 		ar.UpdatedAt = "2001-01-14"
+// 		ar.DeletedAt = "2001-01-14"
+// 		ar.StatusAt = 1
+// 		ha[i] = ar
+// 	}
+// 	err := hsAuthRecords.AddBatch(ha)
+// 	Checkerr(err)
+//
+// 	pp.Println(hsAuthRecords.GetSql())
+// }
 
 func TestARSelect(t *testing.T) {
 	ar := ormstruct.NewHsAuthRecords()
