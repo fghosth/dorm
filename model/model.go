@@ -1,29 +1,17 @@
 
 package model
-
 import (
-	"database/sql"
-	"fmt"
-	"log"
+ "database/sql"
+ "log"
+ "strconv"
+_ "github.com/go-sql-driver/mysql"
 )
 
-const (
-	LIMIT   = 500  //默认查询条数限制
-	OFFSET  = 0    //默认位置
-	MAXROWS = 1000 //最多查出多少条,-1为不限制
-)
 
-var DB *sql.DB //数据库连接
-var Beforefun Before
-var Afterfun After
+var sqlModel string
+var argsModel []interface{}
+var dbconnModel *sql.DB
 
-func init() {
-	SetConn("mysql", "root:@tcp(localhost:3306)/praise_auth?charset=utf8")
-}
-
-/*
-模型的基本方法接口
-*/
 type Model interface {
 	/*
 			   根据条件查找结果集
@@ -34,170 +22,281 @@ type Model interface {
 		     @return struct 集合
 		     @return error 错误
 	*/
-	Select(sql string, limit, offset int, value ...interface{}) ([]interface{}, error)
-	/*
-			   根据主键查找
-			   @parm id 主键
-		     @return struct
-		     @return error 错误
-	*/
-	FindByID(id int64) (interface{}, error)
-	/*
-			   根据自身struct内容添加
-			   @parm
-		     @return 返回主键id
-		     @return error 错误
-	*/
-	Add() (int64, error)
-	/*
-			   批量添加
-			   @parm struct数组
-		     @return error 错误
-	*/
-	AddBatch(obj []interface{}) error
-	/*
-			   根据自身struct更新
-			   @parm
-		     @return int64 修改记录的id
-		     @return error 错误
-	*/
-	Update() (int64, error)
-	/*
-			   批量更新
-			   @parm struct数组
-		     @return error 错误
-	*/
-	UpdateBatch(obj []interface{}) error
-	/*
-			   根据自身struct删除
-			   @parm
-		     @return int64 影响行数
-		     @return error 错误
-	*/
-	Delete() (int64, error)
-	/*
-			   批量删除
-			   @parm struct struct数组
-		     @return error 错误
-	*/
+	Select(sql string, limit, offset int, value ...interface{}
 
-	DeleteBatch(obj []interface{}) error
-	/*
-			   执行sql语句 非查询的语句
-			   @parm sql sql语句，valuesql语句中?的部分，可以为空
-		     @return int64 影响的行数
-		     @return error 错误
-	*/
-	Exec(sql string, value ...interface{}) (int64, error)
+//返回执行语句后sql，调试用
+func (model Model) GetSql() (string, []interface{}) {
+	return sqlModel, argsModel
 }
 
-/*
-获取不同类型数据库连接，支持mysql，mariadb，cockroachDB
-*/
-func SetConn(db, str string) {
+//设置db
+func (model Model) SetDBConn(db, str string) {
 	var err error
 	switch db {
 	case "mysql":
-		DB, err = sql.Open("mysql", str)
+		dbconnModel, err = sql.Open("mysql", str)
 		if err != nil {
 			log.Fatal("error connecting to the database: ", err)
 		}
 	case "mariadb":
-		DB, err = sql.Open("mysql", str)
+		dbconnModel, err = sql.Open("mysql", str)
 		if err != nil {
 			log.Fatal("error connecting to the database: ", err)
 		}
 	case "cockroachDB":
-		DB, err = sql.Open("postgres", str)
+		dbconnModel, err = sql.Open("postgres", str)
 		if err != nil {
 			log.Fatal("error connecting to the database: ", err)
 		}
 	}
-
 }
-func Checkerr(err error) error {
+
+func NewModel() Model {
+	dbconnModel = DB
+	return Model{}
+}
+
+
+func (model Model) Select(sql string, limit, offset int, value ...interface{}) ([]interface{}, error) {
+	for i := 0; i < len(Beforefun.Select); i++ { //前置hooks
+		Beforefun.Select[i]()
+	}
+	var err error
+	if limit > MAXROWS {
+		limit = MAXROWS
+	}
+	ar := make([]interface{}, limit) //0为可变数组长度
+	// ar[0].(*HsAuthRecords)
+	sqlstr := "select select from model " + sql + " limit " + strconv.Itoa(limit) + " offset " + strconv.Itoa(offset)
+
+	sqlModel = sqlstr
+	argsModel = value
+	rows, err := DB.Query(sqlstr, value...)
+	defer rows.Close()
 	if err != nil {
-		fmt.Println(err)
-		return err
+		return ar, err
 	}
-	return nil
-}
-
-//hooks前置方法
-type Before struct {
-	Select      []func()
-	Update      []func()
-	FindByID    []func()
-	Add         []func()
-	AddBatch    []func()
-	UpdateBatch []func()
-	Delete      []func()
-	DeleteBatch []func()
-	Exec        []func()
-}
-
-func AddBeforeFun(f func(), w string) bool {
-	success := true
-	switch w {
-	case "Select":
-		Beforefun.Select = append(Beforefun.Select, f)
-	case "Update":
-		Beforefun.Update = append(Beforefun.Update, f)
-	case "FindByID":
-		Beforefun.FindByID = append(Beforefun.FindByID, f)
-	case "Add":
-		Beforefun.Add = append(Beforefun.Add, f)
-	case "AddBatch":
-		Beforefun.AddBatch = append(Beforefun.AddBatch, f)
-	case "UpdateBatch":
-		Beforefun.UpdateBatch = append(Beforefun.UpdateBatch, f)
-	case "Delete":
-		Beforefun.Delete = append(Beforefun.Delete, f)
-	case "DeleteBatch":
-		Beforefun.DeleteBatch = append(Beforefun.DeleteBatch, f)
-	case "Exec":
-		Beforefun.Exec = append(Beforefun.Exec, f)
+	columns, _ := rows.Columns()
+	values := make([]interface{}, len(columns))
+		values[0]=&model.Select(sql
+	num := 0
+	for rows.Next() {
+		if num >= MAXROWS && MAXROWS != -1 {
+			break
+		}
+		err := rows.Scan(values...)
+		Checkerr(err)
+		ar[num] = model
+		num++
 	}
 
-	return success
+	for i := 0; i < len(Afterfun.Select); i++ { //后置hooks
+		Afterfun.Select[i]()
+	}
+	return ar, err
 }
+	
 
-//hooks后置方法
-type After struct {
-	Select      []func()
-	Update      []func()
-	FindByID    []func()
-	Add         []func()
-	AddBatch    []func()
-	UpdateBatch []func()
-	Delete      []func()
-	DeleteBatch []func()
-	Exec        []func()
+func (model *Model) FindByID(id int64) (interface{}, error) {
+	for i := 0; i < len(Beforefun.FindByID); i++ { //前置hooks
+		Beforefun.FindByID[i]()
+	}
+	args := make([]interface{}, 1)
+	args[0] = id
+	sqlstr := "SELECT select FROM model WHERE select = ?"
+	sqlModel = sqlstr
+	argsModel = args
+	rows, err := DB.Query(sqlstr, args...)
+	defer rows.Close()
+	if err != nil {
+		return model, err
+	}
+	columns, _ := rows.Columns()
+	values := make([]interface{}, len(columns))
+		values[0]=&model.Select(sql
+	if rows.Next() {
+		err = rows.Scan(values...)
+		Checkerr(err)
+	}
+	for i := 0; i < len(Afterfun.FindByID); i++ { //后置hooks
+		Afterfun.FindByID[i]()
+	}
+	return model, err
 }
+	
 
-func AddAfterFun(f func(), w string) bool {
-	success := true
-	switch w {
-	case "Select":
-		Afterfun.Select = append(Afterfun.Select, f)
-	case "Update":
-		Afterfun.Update = append(Afterfun.Update, f)
-	case "FindByID":
-		Afterfun.FindByID = append(Afterfun.FindByID, f)
-	case "Add":
-		Afterfun.Add = append(Afterfun.Add, f)
-	case "AddBatch":
-		Afterfun.AddBatch = append(Afterfun.AddBatch, f)
-	case "UpdateBatch":
-		Afterfun.UpdateBatch = append(Afterfun.UpdateBatch, f)
-	case "Delete":
-		Afterfun.Delete = append(Afterfun.Delete, f)
-	case "DeleteBatch":
-		Afterfun.DeleteBatch = append(Afterfun.DeleteBatch, f)
-	case "Exec":
-		Afterfun.Exec = append(Afterfun.Exec, f)
+func (model Model) Add() (int64, error) {
+	for i := 0; i < len(Beforefun.Add); i++ { //前置hooks
+		Beforefun.Add[i]()
+	}
+	sqlstr := "INSERT INTO model () VALUES ()"
+
+	stmtIns, err := DB.Prepare(sqlstr)
+	Checkerr(err)
+	defer stmtIns.Close()
+	args := make([]interface{}, 0)
+		
+	sqlModel = sqlstr
+	argsModel = args
+	result, err := stmtIns.Exec(args...)
+	Checkerr(err)
+	for i := 0; i < len(Afterfun.Add); i++ { //后置hooks
+		Afterfun.Add[i]()
+	}
+	return result.LastInsertId()
+}
+	
+
+func (model Model) AddBatch(obj []interface{}) error {
+	for i := 0; i < len(Beforefun.AddBatch); i++ { //前置hooks
+		Beforefun.AddBatch[i]()
+	}
+	sqlstr := "INSERT INTO model () VALUES ()"
+	tx, err := DB.Begin()
+	Checkerr(err)
+	stmt, err := tx.Prepare(sqlstr)
+	defer stmt.Close()
+	Checkerr(err)
+	args := make([]interface{}, 0)
+
+	sqlModel = sqlstr
+	argsModel = args
+
+	for _, value := range obj {
+		v := value.(Model)
+	 		
+		_, err = stmt.Exec(args...)
+		Checkerr(err)
+	}
+	err = tx.Commit()
+	Checkerr(err)
+	for i := 0; i < len(Afterfun.AddBatch); i++ { //后置hooks
+		Afterfun.AddBatch[i]()
 	}
 
-	return success
+	return err
+}
+
+
+func (model *Model) Update() (int64, error) {
+	for i := 0; i < len(Beforefun.Update); i++ { //前置hooks
+		Beforefun.Update[i]()
+	}
+	sqlstr := "UPDATE model SET  where select=?"
+	stmtIns, err := DB.Prepare(sqlstr)
+	Checkerr(err)
+	defer stmtIns.Close()
+	args := make([]interface{}, 1)
+		args[0]=&model.Select(sql
+	sqlModel = sqlstr
+	argsModel = args
+	result, err := stmtIns.Exec(args...)
+	Checkerr(err)
+	for i := 0; i < len(Afterfun.Update); i++ { //后置hooks
+		Afterfun.Update[i]()
+	}
+	return result.RowsAffected()
+}
+
+
+func (model Model) UpdateBatch(obj []interface{}) error {
+	for i := 0; i < len(Beforefun.UpdateBatch); i++ { //前置hooks
+		Beforefun.UpdateBatch[i]()
+	}
+	sqlstr := "UPDATE model SET  where select=?"
+	tx, err := DB.Begin()
+	Checkerr(err)
+	stmt, err := tx.Prepare(sqlstr)
+	defer stmt.Close()
+	Checkerr(err)
+	args := make([]interface{}, 1)
+
+	for _, value := range obj {
+		v := value.(Model)
+	 		args[0]=v.Select(sql
+		_, err = stmt.Exec(args...)
+		Checkerr(err)
+	}
+	sqlModel = sqlstr
+	argsModel = args
+	err = tx.Commit()
+	Checkerr(err)
+	for i := 0; i < len(Afterfun.UpdateBatch); i++ { //后置hooks
+		Afterfun.UpdateBatch[i]()
+	}
+
+	return err
+}
+
+
+func (model Model) Delete() (int64, error) {
+	for i := 0; i < len(Beforefun.Delete); i++ { //前置hooks
+		Beforefun.Delete[i]()
+	}
+  sqlstr := "DELETE FROM model WHERE select = ?"
+	stmt, err := DB.Prepare(sqlstr)
+	Checkerr(err)
+	args := make([]interface{}, 1)
+	args[0] = model.Select(sql
+	sqlModel = sqlstr
+	argsModel = args
+	defer stmt.Close()
+	result, err := stmt.Exec(args...)
+
+	Checkerr(err)
+	for i := 0; i < len(Afterfun.Delete); i++ { //后置hooks
+		Afterfun.Delete[i]()
+	}
+	return result.RowsAffected()
+}
+
+
+func (model Model) DeleteBatch(obj []interface{}) error {
+	for i := 0; i < len(Beforefun.DeleteBatch); i++ { //前置hooks
+		Beforefun.DeleteBatch[i]()
+	}
+	sqlstr := "DELETE FROM model WHERE select = ?"
+	tx, err := DB.Begin()
+	Checkerr(err)
+	stmt, err := tx.Prepare(sqlstr)
+	defer stmt.Close()
+	Checkerr(err)
+	args := make([]interface{}, 1)
+
+	for _, value := range obj {
+		v := value.(Model)
+		args[0] = v.Select(sql
+		_, err = stmt.Exec(args...)
+		Checkerr(err)
+	}
+	sqlModel = sqlstr
+	argsModel = args
+	err = tx.Commit()
+	Checkerr(err)
+	for i := 0; i < len(Afterfun.DeleteBatch); i++ { //后置hooks
+		Afterfun.DeleteBatch[i]()
+	}
+	return err
+}
+
+
+func (model Model) Exec(sql string, value ...interface{}) (int64, error) {
+	for i := 0; i < len(Beforefun.Exec); i++ { //前置hooks
+		Beforefun.Exec[i]()
+	}
+
+	stmt, err := DB.Prepare(sql)
+	Checkerr(err)
+
+	sqlModel = sql
+	argsModel = value
+	defer stmt.Close()
+	result, err := stmt.Exec(value...)
+
+	Checkerr(err)
+	for i := 0; i < len(Afterfun.Exec); i++ { //后置hooks
+		Afterfun.Exec[i]()
+	}
+	return result.RowsAffected()
 }
 

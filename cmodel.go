@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/urfave/cli"
@@ -39,7 +40,21 @@ func CmodelFile(c *cli.Context) error {
 		return M_ERRNOFILE
 	}
 	createBaseModel()
-	return createModel(file, db)
+	f, _ := os.Stat(file)
+	if f.IsDir() { //如果是目录
+		err := filepath.Walk(file, func(path string, f os.FileInfo, err error) error {
+			if f == nil {
+				return err
+			}
+			if !f.IsDir() {
+				createModel(path, db)
+			}
+			return nil
+		})
+		return err
+	} else {
+		return createModel(file, db)
+	}
 
 }
 

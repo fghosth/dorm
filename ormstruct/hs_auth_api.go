@@ -1,12 +1,12 @@
+package ormstruct
 
-package model
 import (
- "database/sql"
- "log"
- "strconv"
-_ "github.com/go-sql-driver/mysql"
-)
+	"database/sql"
+	"log"
+	"strconv"
 
+	_ "github.com/go-sql-driver/mysql"
+)
 
 var sqlHsAuthApi string
 var argsHsAuthApi []interface{}
@@ -55,7 +55,6 @@ func NewHsAuthApi() HsAuthApi {
 	return HsAuthApi{}
 }
 
-
 func (hsAuthApi HsAuthApi) Select(sql string, limit, offset int, value ...interface{}) ([]interface{}, error) {
 	for i := 0; i < len(Beforefun.Select); i++ { //前置hooks
 		Beforefun.Select[i]()
@@ -77,14 +76,14 @@ func (hsAuthApi HsAuthApi) Select(sql string, limit, offset int, value ...interf
 	}
 	columns, _ := rows.Columns()
 	values := make([]interface{}, len(columns))
-		values[0]=&hsAuthApi.Id
-		values[1]=&hsAuthApi.ApiKey
-		values[2]=&hsAuthApi.Name
-		values[3]=&hsAuthApi.Type
-		values[4]=&hsAuthApi.CreatedAt
-		values[5]=&hsAuthApi.UpdatedAt
-		values[6]=&hsAuthApi.DeletedAt
-		values[7]=&hsAuthApi.StatusAt
+	values[0] = &hsAuthApi.Id
+	values[1] = &hsAuthApi.ApiKey
+	values[2] = &hsAuthApi.Name
+	values[3] = &hsAuthApi.Type
+	values[4] = &hsAuthApi.CreatedAt
+	values[5] = &hsAuthApi.UpdatedAt
+	values[6] = &hsAuthApi.DeletedAt
+	values[7] = &hsAuthApi.StatusAt
 	num := 0
 	for rows.Next() {
 		if num >= MAXROWS && MAXROWS != -1 {
@@ -101,7 +100,6 @@ func (hsAuthApi HsAuthApi) Select(sql string, limit, offset int, value ...interf
 	}
 	return ar, err
 }
-	
 
 func (hsAuthApi *HsAuthApi) FindByID(id int64) (interface{}, error) {
 	for i := 0; i < len(Beforefun.FindByID); i++ { //前置hooks
@@ -119,14 +117,14 @@ func (hsAuthApi *HsAuthApi) FindByID(id int64) (interface{}, error) {
 	}
 	columns, _ := rows.Columns()
 	values := make([]interface{}, len(columns))
-		values[0]=&hsAuthApi.Id
-		values[1]=&hsAuthApi.ApiKey
-		values[2]=&hsAuthApi.Name
-		values[3]=&hsAuthApi.Type
-		values[4]=&hsAuthApi.CreatedAt
-		values[5]=&hsAuthApi.UpdatedAt
-		values[6]=&hsAuthApi.DeletedAt
-		values[7]=&hsAuthApi.StatusAt
+	values[0] = &hsAuthApi.Id
+	values[1] = &hsAuthApi.ApiKey
+	values[2] = &hsAuthApi.Name
+	values[3] = &hsAuthApi.Type
+	values[4] = &hsAuthApi.CreatedAt
+	values[5] = &hsAuthApi.UpdatedAt
+	values[6] = &hsAuthApi.DeletedAt
+	values[7] = &hsAuthApi.StatusAt
 	if rows.Next() {
 		err = rows.Scan(values...)
 		Checkerr(err)
@@ -136,7 +134,6 @@ func (hsAuthApi *HsAuthApi) FindByID(id int64) (interface{}, error) {
 	}
 	return hsAuthApi, err
 }
-	
 
 func (hsAuthApi HsAuthApi) Add() (int64, error) {
 	for i := 0; i < len(Beforefun.Add); i++ { //前置hooks
@@ -148,14 +145,14 @@ func (hsAuthApi HsAuthApi) Add() (int64, error) {
 	Checkerr(err)
 	defer stmtIns.Close()
 	args := make([]interface{}, 7)
-		args[0]=&hsAuthApi.ApiKey
-		args[1]=&hsAuthApi.Name
-		args[2]=&hsAuthApi.Type
-		args[3]=&hsAuthApi.CreatedAt
-		args[4]=&hsAuthApi.UpdatedAt
-		args[5]=&hsAuthApi.DeletedAt
-		args[6]=&hsAuthApi.StatusAt
-		
+	args[0] = &hsAuthApi.ApiKey
+	args[1] = &hsAuthApi.Name
+	args[2] = &hsAuthApi.Type
+	args[3] = &hsAuthApi.CreatedAt
+	args[4] = &hsAuthApi.UpdatedAt
+	args[5] = &hsAuthApi.DeletedAt
+	args[6] = &hsAuthApi.StatusAt
+
 	sqlHsAuthApi = sqlstr
 	argsHsAuthApi = args
 	result, err := stmtIns.Exec(args...)
@@ -165,7 +162,6 @@ func (hsAuthApi HsAuthApi) Add() (int64, error) {
 	}
 	return result.LastInsertId()
 }
-	
 
 func (hsAuthApi HsAuthApi) AddBatch(obj []interface{}) error {
 	for i := 0; i < len(Beforefun.AddBatch); i++ { //前置hooks
@@ -184,14 +180,14 @@ func (hsAuthApi HsAuthApi) AddBatch(obj []interface{}) error {
 
 	for _, value := range obj {
 		v := value.(HsAuthApi)
-	 		args[0]=v.ApiKey
-	 		args[1]=v.Name
-	 		args[2]=v.Type
-	 		args[3]=v.CreatedAt
-	 		args[4]=v.UpdatedAt
-	 		args[5]=v.DeletedAt
-	 		args[6]=v.StatusAt
-	 		
+		args[0] = v.ApiKey
+		args[1] = v.Name
+		args[2] = v.Type
+		args[3] = v.CreatedAt
+		args[4] = v.UpdatedAt
+		args[5] = v.DeletedAt
+		args[6] = v.StatusAt
+
 		_, err = stmt.Exec(args...)
 		Checkerr(err)
 	}
@@ -204,7 +200,6 @@ func (hsAuthApi HsAuthApi) AddBatch(obj []interface{}) error {
 	return err
 }
 
-
 func (hsAuthApi *HsAuthApi) Update() (int64, error) {
 	for i := 0; i < len(Beforefun.Update); i++ { //前置hooks
 		Beforefun.Update[i]()
@@ -214,14 +209,14 @@ func (hsAuthApi *HsAuthApi) Update() (int64, error) {
 	Checkerr(err)
 	defer stmtIns.Close()
 	args := make([]interface{}, 8)
-		args[0]=&hsAuthApi.ApiKey
-		args[1]=&hsAuthApi.Name
-		args[2]=&hsAuthApi.Type
-		args[3]=&hsAuthApi.CreatedAt
-		args[4]=&hsAuthApi.UpdatedAt
-		args[5]=&hsAuthApi.DeletedAt
-		args[6]=&hsAuthApi.StatusAt
-		args[7]=&hsAuthApi.Id
+	args[0] = &hsAuthApi.ApiKey
+	args[1] = &hsAuthApi.Name
+	args[2] = &hsAuthApi.Type
+	args[3] = &hsAuthApi.CreatedAt
+	args[4] = &hsAuthApi.UpdatedAt
+	args[5] = &hsAuthApi.DeletedAt
+	args[6] = &hsAuthApi.StatusAt
+	args[7] = &hsAuthApi.Id
 	sqlHsAuthApi = sqlstr
 	argsHsAuthApi = args
 	result, err := stmtIns.Exec(args...)
@@ -231,7 +226,6 @@ func (hsAuthApi *HsAuthApi) Update() (int64, error) {
 	}
 	return result.RowsAffected()
 }
-
 
 func (hsAuthApi HsAuthApi) UpdateBatch(obj []interface{}) error {
 	for i := 0; i < len(Beforefun.UpdateBatch); i++ { //前置hooks
@@ -247,14 +241,14 @@ func (hsAuthApi HsAuthApi) UpdateBatch(obj []interface{}) error {
 
 	for _, value := range obj {
 		v := value.(HsAuthApi)
-	 		args[0]=v.ApiKey
-	 		args[1]=v.Name
-	 		args[2]=v.Type
-	 		args[3]=v.CreatedAt
-	 		args[4]=v.UpdatedAt
-	 		args[5]=v.DeletedAt
-	 		args[6]=v.StatusAt
-	 		args[7]=v.Id
+		args[0] = v.ApiKey
+		args[1] = v.Name
+		args[2] = v.Type
+		args[3] = v.CreatedAt
+		args[4] = v.UpdatedAt
+		args[5] = v.DeletedAt
+		args[6] = v.StatusAt
+		args[7] = v.Id
 		_, err = stmt.Exec(args...)
 		Checkerr(err)
 	}
@@ -269,12 +263,11 @@ func (hsAuthApi HsAuthApi) UpdateBatch(obj []interface{}) error {
 	return err
 }
 
-
 func (hsAuthApi HsAuthApi) Delete() (int64, error) {
 	for i := 0; i < len(Beforefun.Delete); i++ { //前置hooks
 		Beforefun.Delete[i]()
 	}
-  sqlstr := "DELETE FROM hs_auth_api WHERE id = ?"
+	sqlstr := "DELETE FROM hs_auth_api WHERE id = ?"
 	stmt, err := DB.Prepare(sqlstr)
 	Checkerr(err)
 	args := make([]interface{}, 1)
@@ -290,7 +283,6 @@ func (hsAuthApi HsAuthApi) Delete() (int64, error) {
 	}
 	return result.RowsAffected()
 }
-
 
 func (hsAuthApi HsAuthApi) DeleteBatch(obj []interface{}) error {
 	for i := 0; i < len(Beforefun.DeleteBatch); i++ { //前置hooks
@@ -320,7 +312,6 @@ func (hsAuthApi HsAuthApi) DeleteBatch(obj []interface{}) error {
 	return err
 }
 
-
 func (hsAuthApi HsAuthApi) Exec(sql string, value ...interface{}) (int64, error) {
 	for i := 0; i < len(Beforefun.Exec); i++ { //前置hooks
 		Beforefun.Exec[i]()
@@ -340,4 +331,3 @@ func (hsAuthApi HsAuthApi) Exec(sql string, value ...interface{}) (int64, error)
 	}
 	return result.RowsAffected()
 }
-
