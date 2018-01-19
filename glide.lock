@@ -1,5 +1,5 @@
-hash: 7661f978c139d3213d7f4122b1bf59ffa86004f80b8704f996a4f7ad07b15914
-updated: 2017-12-18T19:23:58.656576+08:00
+hash: ff706e0ab2ffa20f1aba8d8d1584634af7c62f786a6cc5e51fcf91f41dadb5f8
+updated: 2018-01-20T07:38:00.491234+08:00
 imports:
 - name: github.com/aymerick/raymond
   version: 72acac2207479d21dd45898c2a4264246c818148
@@ -10,25 +10,29 @@ imports:
 - name: github.com/bndr/gotabulate
   version: bc555436bfd5d4e93a2dd35b462ce37e067afdda
 - name: github.com/go-kit/kit
-  version: 1b4cf21e19ea1dae31038b02c4982eea5b4214b7
+  version: 953e747656a7bbb5e1f998608b460458958b70cc
 - name: github.com/go-sql-driver/mysql
-  version: 9181e3a86a19bacd63e68d43ae8b7b36320d8092
+  version: 2cc627ac8defc45d65066ae98f898166f580f9a4
 - name: github.com/hoisie/mustache
   version: 6375acf62c69d9d3ad20fd0599d82ca94ea12284
 - name: github.com/jinzhu/gorm
   version: 0a51f6cdc55d1650d9ed3b4c13026cfa9133b01e
 - name: github.com/k0kubun/pp
   version: e057ee7a28277be4d2af303443b6da377768181f
+- name: github.com/lib/pq
+  version: 27ea5d92de30060e7121ddd543fe14e9a327e0cc
+  subpackages:
+  - oid
 - name: github.com/mattn/go-colorable
-  version: 6fcc0c1fd9b620311d821b106a400b35dc95c497
+  version: 6cc8b475d4682021d75d2cbe2bc481bec4ce98e5
 - name: github.com/mattn/go-isatty
   version: 6ca4dbf54d38eea1a992b3c722a76a5d1c4cb25c
 - name: github.com/mattn/go-runewidth
   version: 97311d9f7767e3d6f422ea06661bc2c7a19e8a5d
 - name: github.com/spf13/afero
-  version: 8d919cbe7e2627e417f3e45c3c0e489a5b7e2536
+  version: bb8f1927f2a9d3ab41c9340aa034f6b803f4359c
 - name: github.com/urfave/cli
-  version: 39908eb08fee7c10d842622a114a5c133fb0a3c6
+  version: 75104e932ac2ddb944a6ea19d9f9f26316ff1145
 - name: golang.org/x/sys
   version: 571f7bbbe08da2a8955aed9d4db316e78630e9a3
   subpackages:

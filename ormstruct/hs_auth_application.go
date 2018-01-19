@@ -5,7 +5,7 @@ import (
 	"log"
 	"strconv"
 
-	// _ "github.com/go-sql-driver/mysql"
+	_ "github.com/go-sql-driver/mysql"
 	"github.com/k0kubun/pp"
 	_ "github.com/lib/pq"
 )

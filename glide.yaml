@@ -20,3 +20,4 @@ import:
   version: master
 - package: github.com/jinzhu/gorm
   version: master
+- package: github.com/lib/pq
