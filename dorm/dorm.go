@@ -15,13 +15,59 @@ var (
 	sl = new(lexer.StructLexer)
 )
 
+func CreateDorm(pkname, sqlDriver, structStr string) string {
+	var filestring string
+	header := CreateHeader(pkname, sqlDriver) + "\n"
+	field := CreateField(structStr) + "\n"
+	function := CreateFunction(structStr) + "\n"
+	selec := CreateSelect(structStr) + "\n"
+	findByID := CreateFindByID(structStr) + "\n"
+	add := CreateAdd(structStr) + "\n"
+	addbatch := CreateAddBatch(structStr) + "\n"
+	update := CreateUpdate(structStr) + "\n"
+	updatebatch := CreateUpdateBatch(structStr) + "\n"
+	delete := CreateDelete(structStr) + "\n"
+	deletebatch := CreateDeleteBatch(structStr) + "\n"
+	exec := CreateExec(structStr) + "\n"
+
+	filestring = header + field + structStr + "\n" + function + selec + findByID + add + addbatch + update + updatebatch + delete + deletebatch + exec
+	return filestring
+}
+func CreateModel(pkname string) string {
+	ctx := map[string]interface{}{
+		"pkname": pkname,
+	}
+	str, err := raymond.Render(MODEL_TPL, ctx)
+	ut.Checkerr(err)
+	return str
+}
+func CreateField(structStr string) string {
+	obj := sl.StructName(structStr)
+
+	ctx := map[string]interface{}{
+		"obj": obj,
+	}
+	str, err := raymond.Render(Field_TPL, ctx)
+	ut.Checkerr(err)
+	return str
+}
+
 func CreateHeader(pkname, sqlDriver string) string {
-	var imp = [...]string{`"database/sql"`, `_ "github.com/go-sql-driver/mysql"`, `"log"`, `"strconv"`}
+	var imp = [...]string{`"database/sql"`, `"log"`, `"strconv"`}
+	var dbDriver string
+	switch sqlDriver {
+	case "mysql":
+		dbDriver = "github.com/go-sql-driver/mysql"
+	case "mariadb":
+		dbDriver = "github.com/go-sql-driver/mysql"
+	case "cockroachDB":
+		dbDriver = "github.com/lib/pq"
+	}
 
 	ctx := map[string]interface{}{
 		"field":     imp,
 		"pkname":    pkname,
-		"sqlDriver": sqlDriver,
+		"sqlDriver": dbDriver,
 	}
 	str, err := raymond.Render(Header_TPL, ctx)
 	ut.Checkerr(err)
@@ -114,7 +160,7 @@ func CreateUpdateBatch(structStr string) string {
 	if len(field) > 0 {
 		sqlField = ut.CalToUnder(field[0]["field"])
 	}
-
+	length := len(field)
 	values := make([]string, len(field))
 	for i, v := range field {
 		if i > 0 { //去除id
@@ -124,6 +170,8 @@ func CreateUpdateBatch(structStr string) string {
 			} else {
 				fields = fields + "," + ut.CalToUnder(v["field"]) + "=?"
 			}
+		} else {
+			values[length-1] = "args[" + strconv.Itoa(length-1) + "]=v." + v["field"]
 		}
 
 	}
@@ -134,6 +182,7 @@ func CreateUpdateBatch(structStr string) string {
 		"tableName": tableName,
 		"field":     values,
 		"sqlField":  sqlField,
+		"len":       length,
 	}
 	str, err := raymond.Render(UpdateBatch_TPL, ctx)
 	ut.Checkerr(err)
@@ -150,7 +199,7 @@ func CreateUpdate(structStr string) string {
 	if len(field) > 0 {
 		sqlField = ut.CalToUnder(field[0]["field"])
 	}
-
+	length := len(field)
 	values := make([]string, len(field))
 	for i, v := range field {
 		if i > 0 { //去除id
@@ -160,16 +209,20 @@ func CreateUpdate(structStr string) string {
 			} else {
 				fields = fields + "," + ut.CalToUnder(v["field"]) + "=?"
 			}
+		} else {
+			values[length-1] = "args[" + strconv.Itoa(length-1) + "]=&" + objvar + "." + v["field"]
 		}
 
 	}
+
 	ctx := map[string]interface{}{
 		"objvar":    objvar,
-		"obj":       "*" + obj,
+		"obj":       obj,
 		"fields":    fields,
 		"tableName": tableName,
 		"field":     values,
 		"sqlField":  sqlField,
+		"len":       length,
 	}
 	str, err := raymond.Render(Update_TPL, ctx)
 	ut.Checkerr(err)
@@ -182,15 +235,17 @@ func CreateAddBatch(structStr string) string {
 	ut.Checkerr(err)
 	tableName := ut.CalToUnder(obj)
 	field := sl.FieldName(structStr)
-	var fields string
-
+	var fields, parms string
+	length := len(field) - 1
 	values := make([]string, len(field))
 	for i, v := range field {
 		if i > 0 { //去除id
 			values[i-1] = "args[" + strconv.Itoa(i-1) + "]=v." + v["field"]
 			if fields == "" {
+				parms = "?"
 				fields = ut.CalToUnder(v["field"])
 			} else {
+				parms = parms + ",?"
 				fields = fields + "," + ut.CalToUnder(v["field"])
 			}
 		}
@@ -202,6 +257,8 @@ func CreateAddBatch(structStr string) string {
 		"fields":    fields,
 		"tableName": tableName,
 		"field":     values,
+		"parms":     parms,
+		"len":       length,
 	}
 	str, err := raymond.Render(AddBatch_TPL, ctx)
 	ut.Checkerr(err)
@@ -214,15 +271,17 @@ func CreateAdd(structStr string) string {
 	ut.Checkerr(err)
 	tableName := ut.CalToUnder(obj)
 	field := sl.FieldName(structStr)
-	var fields string
-
+	var fields, parms string
+	length := len(field) - 1
 	values := make([]string, len(field))
 	for i, v := range field {
 		if i > 0 { //去除id
 			values[i-1] = "args[" + strconv.Itoa(i-1) + "]=&" + objvar + "." + v["field"]
 			if fields == "" {
+				parms = "?"
 				fields = ut.CalToUnder(v["field"])
 			} else {
+				parms = parms + ",?"
 				fields = fields + "," + ut.CalToUnder(v["field"])
 			}
 		}
@@ -234,6 +293,8 @@ func CreateAdd(structStr string) string {
 		"fields":    fields,
 		"tableName": tableName,
 		"field":     values,
+		"parms":     parms,
+		"len":       length,
 	}
 	str, err := raymond.Render(Add_TPL, ctx)
 	ut.Checkerr(err)
@@ -262,7 +323,7 @@ func CreateFindByID(structStr string) string {
 	}
 	ctx := map[string]interface{}{
 		"objvar":    objvar,
-		"obj":       "*" + obj,
+		"obj":       obj,
 		"fields":    fields,
 		"tableName": tableName,
 		"field":     values,

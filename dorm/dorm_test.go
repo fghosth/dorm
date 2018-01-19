@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"jvole.com/createProject/dorm"
+	"jvole.com/createProject/lexer"
 	"jvole.com/createProject/util"
 )
 
@@ -15,12 +16,40 @@ func init() {
 
 }
 
-func TestCreateHeader(t *testing.T) {
+// func TestCreateModel(t *testing.T) {
+//
+// 	Str := dorm.CreateModel("ormstruct")
+// 	fmt.Println(Str)
+// }
 
-	Str := dorm.CreateHeader("dorm", "mysql")
-	fmt.Println(Str)
+func TestCreateDorm(t *testing.T) {
+	sl := new(lexer.StructLexer)
+	fileStr := sl.GetStructFile(file)
+	arrStruct := sl.StructStr(fileStr)
+	for _, v := range arrStruct {
+		Str := dorm.CreateDorm("ormstruct", "mysql", v)
+		fmt.Println(Str)
+	}
 
 }
+
+// func TestCreateField(t *testing.T) {
+// 	sl := new(lexer.StructLexer)
+// 	fileStr := sl.GetStructFile(file)
+// 	arrStruct := sl.StructStr(fileStr)
+// 	for _, v := range arrStruct {
+// 		Str := dorm.CreateField(v)
+// 		fmt.Println(Str)
+// 	}
+// }
+
+// func TestCreateHeader(t *testing.T) {
+//
+// 	Str := dorm.CreateHeader("dorm", "cockroachDB")
+// 	// Str := dorm.CreateHeader("dorm", "mysql")
+// 	fmt.Println(Str)
+//
+// }
 
 // func TestCreateFunction(t *testing.T) {
 // 	sl := new(lexer.StructLexer)
