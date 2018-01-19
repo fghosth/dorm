@@ -84,7 +84,31 @@ func main() {
 				return CsqlFile(c)
 			},
 		},
-
+		{
+			Name:    "createmodel",
+			Aliases: []string{"cm"},
+			Usage:   "根据struct生成model。包括基础的增删改查，并映射到struct。支持mysql，Cockroach",
+			Flags: []cli.Flag{
+				cli.StringFlag{
+					Name:  "database, d",
+					Value: "mysql",
+					Usage: "需支持的数据库脚本.可选值：mysql，Cockroach",
+				},
+				cli.StringFlag{
+					Name:  "file, f",
+					Value: "",
+					Usage: "struct文件.",
+				},
+				cli.StringFlag{
+					Name:  "cover",
+					Value: "false",
+					Usage: "是否覆盖已有文件，默认值false.可选值：true，false",
+				},
+			},
+			Action: func(c *cli.Context) error {
+				return CmodelFile(c)
+			},
+		},
 		{
 			Name:    "createstruct",
 			Aliases: []string{"cst"},

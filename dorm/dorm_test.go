@@ -33,15 +33,15 @@ func TestCreateDorm(t *testing.T) {
 
 }
 
-// func TestCreateField(t *testing.T) {
-// 	sl := new(lexer.StructLexer)
-// 	fileStr := sl.GetStructFile(file)
-// 	arrStruct := sl.StructStr(fileStr)
-// 	for _, v := range arrStruct {
-// 		Str := dorm.CreateField(v)
-// 		fmt.Println(Str)
-// 	}
-// }
+func TestCreateField(t *testing.T) {
+	sl := new(lexer.StructLexer)
+	fileStr := sl.GetStructFile(file)
+	arrStruct := sl.StructStr(fileStr)
+	for _, v := range arrStruct {
+		Str := dorm.CreateField(v)
+		fmt.Println(Str)
+	}
+}
 
 // func TestCreateHeader(t *testing.T) {
 //
