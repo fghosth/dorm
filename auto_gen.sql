@@ -6,7 +6,7 @@
  		api_key varchar NOT NULL,
  		name varchar NOT NULL,
  		type int NOT NULL DEFAULT '0',
- 		created_at int NOT NULL,
+ 		created_at int NOT NULL DEFAULT clock_timestamp(),
  		updated_at int NOT NULL,
  		deleted_at int DEFAULT NULL,
  		status_at int NOT NULL DEFAULT '1'
