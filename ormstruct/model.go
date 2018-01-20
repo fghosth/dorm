@@ -16,6 +16,7 @@ const (
 var DB *sql.DB //数据库连接
 var Beforefun Before
 var Afterfun After
+var Driver string
 
 func init() {
 	// SetConn("mysql", "root:@tcp(localhost:3306)/praise_auth?charset=utf8")
@@ -97,6 +98,7 @@ type Model interface {
 */
 func SetConn(db, str string) {
 	var err error
+	Driver = db
 	switch db {
 	case "mysql":
 		DB, err = sql.Open("mysql", str)

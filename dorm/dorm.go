@@ -55,14 +55,14 @@ func CreateField(structStr string) string {
 func CreateHeader(pkname, sqlDriver string) string {
 	var imp = [...]string{`"database/sql"`, `"log"`, `"strconv"`}
 	var dbDriver string
-	switch sqlDriver {
-	case "mysql":
-		dbDriver = "github.com/go-sql-driver/mysql"
-	case "mariadb":
-		dbDriver = "github.com/go-sql-driver/mysql"
-	case "cockroachDB":
-		dbDriver = "github.com/lib/pq"
-	}
+	// switch sqlDriver {
+	// case "mysql":
+	// 	dbDriver = "github.com/go-sql-driver/mysql"
+	// case "mariadb":
+	// 	dbDriver = "github.com/go-sql-driver/mysql"
+	// case "cockroachDB":
+	// 	dbDriver = "github.com/lib/pq"
+	// }
 
 	ctx := map[string]interface{}{
 		"field":     imp,
@@ -235,7 +235,7 @@ func CreateAddBatch(structStr string) string {
 	ut.Checkerr(err)
 	tableName := ut.CalToUnder(obj)
 	field := sl.FieldName(structStr)
-	var fields, parms string
+	var fields, parms, cockroachParms string
 	length := len(field) - 1
 	values := make([]string, len(field))
 	for i, v := range field {
@@ -243,22 +243,25 @@ func CreateAddBatch(structStr string) string {
 			values[i-1] = "args[" + strconv.Itoa(i-1) + "]=v." + v["field"]
 			if fields == "" {
 				parms = "?"
+				cockroachParms = "$" + strconv.Itoa(i)
 				fields = ut.CalToUnder(v["field"])
 			} else {
 				parms = parms + ",?"
+				cockroachParms = cockroachParms + ",$" + strconv.Itoa(i)
 				fields = fields + "," + ut.CalToUnder(v["field"])
 			}
 		}
 
 	}
 	ctx := map[string]interface{}{
-		"objvar":    objvar,
-		"obj":       obj,
-		"fields":    fields,
-		"tableName": tableName,
-		"field":     values,
-		"parms":     parms,
-		"len":       length,
+		"objvar":         objvar,
+		"obj":            obj,
+		"fields":         fields, //sql字段
+		"tableName":      tableName,
+		"field":          values,
+		"mysqlparms":     parms,
+		"cockroachparms": cockroachParms,
+		"len":            length,
 	}
 	str, err := raymond.Render(AddBatch_TPL, ctx)
 	ut.Checkerr(err)

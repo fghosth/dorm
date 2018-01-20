@@ -16,7 +16,7 @@ func ({{{objvar}}} {{{obj}}}) Select(sql string, limit, offset int, value ...int
 
 	sql{{{obj}}} = sqlstr
 	args{{{obj}}} = value
-	rows, err := DB.Query(sqlstr, value...)
+	rows, err := dbconn{{{obj}}}.Query(sqlstr, value...)
 	defer rows.Close()
 	if err != nil {
 		return ar, err
@@ -53,7 +53,7 @@ func ({{{objvar}}} *{{{obj}}}) FindByID(id int64) (interface{}, error) {
 	sqlstr := "SELECT {{{fields}}} FROM {{{tableName}}} WHERE {{{sqlField}}} = ?"
 	sql{{{obj}}} = sqlstr
 	args{{{obj}}} = args
-	rows, err := DB.Query(sqlstr, args...)
+	rows, err := dbconn{{{obj}}}.Query(sqlstr, args...)
 	defer rows.Close()
 	if err != nil {
 		return {{{objvar}}}, err
@@ -81,7 +81,7 @@ func ({{{objvar}}} {{{obj}}}) Add() (int64, error) {
 	}
 	sqlstr := "INSERT INTO {{{tableName}}} ({{{fields}}}) VALUES ({{{parms}}})"
 
-	stmtIns, err := DB.Prepare(sqlstr)
+	stmtIns, err := dbconn{{{obj}}}.Prepare(sqlstr)
 	Checkerr(err)
 	defer stmtIns.Close()
 	args := make([]interface{}, {{{len}}})
@@ -103,8 +103,17 @@ func ({{{objvar}}} {{{obj}}}) AddBatch(obj []interface{}) error {
 	for i := 0; i < len(Beforefun.AddBatch); i++ { //前置hooks
 		Beforefun.AddBatch[i]()
 	}
-	sqlstr := "INSERT INTO {{{tableName}}} ({{{fields}}}) VALUES ({{{parms}}})"
-	tx, err := DB.Begin()
+	var argsStr string
+	switch driverHsAuthApplication {
+	case "mysql":
+		argsStr = "{{{mysqlparms}}}"
+	case "mariadb":
+		argsStr = "{{{mysqlparms}}}"
+	case "cockroachDB":
+		argsStr = "{{{cockroachparms}}}"
+	}
+	sqlstr := "INSERT INTO {{{tableName}}} ({{{fields}}}) VALUES ("+argsStr+")"
+	tx, err := dbconn{{{obj}}}.Begin()
 	Checkerr(err)
 	stmt, err := tx.Prepare(sqlstr)
 	defer stmt.Close()
@@ -137,7 +146,7 @@ func ({{{objvar}}} *{{{obj}}}) Update() (int64, error) {
 		Beforefun.Update[i]()
 	}
 	sqlstr := "UPDATE {{{tableName}}} SET {{{fields}}} where {{{sqlField}}}=?"
-	stmtIns, err := DB.Prepare(sqlstr)
+	stmtIns, err := dbconn{{{obj}}}.Prepare(sqlstr)
 	Checkerr(err)
 	defer stmtIns.Close()
 	args := make([]interface{}, {{{len}}})
@@ -160,7 +169,7 @@ func ({{{objvar}}} {{{obj}}}) UpdateBatch(obj []interface{}) error {
 		Beforefun.UpdateBatch[i]()
 	}
 	sqlstr := "UPDATE {{{tableName}}} SET {{{fields}}} where {{{sqlField}}}=?"
-	tx, err := DB.Begin()
+	tx, err := dbconn{{{obj}}}.Begin()
 	Checkerr(err)
 	stmt, err := tx.Prepare(sqlstr)
 	defer stmt.Close()
@@ -192,7 +201,7 @@ func ({{{objvar}}} {{{obj}}}) Delete() (int64, error) {
 		Beforefun.Delete[i]()
 	}
   sqlstr := "DELETE FROM {{{tableName}}} WHERE {{{sqlField}}} = ?"
-	stmt, err := DB.Prepare(sqlstr)
+	stmt, err := dbconn{{{obj}}}.Prepare(sqlstr)
 	Checkerr(err)
 	args := make([]interface{}, 1)
 	args[0] = {{{objvar}}}.{{{structField}}}
@@ -214,7 +223,7 @@ func ({{{objvar}}} {{{obj}}}) DeleteBatch(obj []interface{}) error {
 		Beforefun.DeleteBatch[i]()
 	}
 	sqlstr := "DELETE FROM {{{tableName}}} WHERE {{{sqlField}}} = ?"
-	tx, err := DB.Begin()
+	tx, err := dbconn{{{obj}}}.Begin()
 	Checkerr(err)
 	stmt, err := tx.Prepare(sqlstr)
 	defer stmt.Close()
@@ -243,7 +252,7 @@ func ({{{objvar}}} {{{obj}}}) Exec(sql string, value ...interface{}) (int64, err
 		Beforefun.Exec[i]()
 	}
 
-	stmt, err := DB.Prepare(sql)
+	stmt, err := dbconn{{{obj}}}.Prepare(sql)
 	Checkerr(err)
 
 	sql{{{obj}}} = sql
@@ -259,9 +268,12 @@ func ({{{objvar}}} {{{obj}}}) Exec(sql string, value ...interface{}) (int64, err
 }
 `
 	Field_TPL = `
-var sql{{{obj}}} string
-var args{{{obj}}} []interface{}
-var dbconn{{{obj}}} *sql.DB
+var (
+	sql{{{obj}}} string
+	args{{{obj}}} []interface{}
+	dbconn{{{obj}}} *sql.DB
+	driver{{{obj}}} string
+)
 `
 	Header_TPL = `
 package {{{pkname}}}
@@ -269,7 +281,8 @@ import (
 	{{#each field}}
  {{{this}}}
 	{{/each}}
-_ "{{{sqlDriver}}}"
+_ "github.com/go-sql-driver/mysql"
+_ "github.com/lib/pq"
 )
 `
 	Function_TPL = `
@@ -281,6 +294,7 @@ func ({{{objvar}}} {{{obj}}}) GetSql() (string, []interface{}) {
 //设置db
 func ({{{objvar}}} {{{obj}}}) SetDBConn(db, str string) {
 	var err error
+	driver{{{obj}}} = db
 	switch db {
 	case "mysql":
 		dbconn{{{obj}}}, err = sql.Open("mysql", str)
@@ -302,6 +316,7 @@ func ({{{objvar}}} {{{obj}}}) SetDBConn(db, str string) {
 
 func New{{{obj}}}() {{{obj}}} {
 	dbconn{{{obj}}} = DB
+	driver{{{obj}}} = Driver
 	return {{{obj}}}{}
 }
 `
@@ -321,9 +336,13 @@ const (
 	MAXROWS = 1000 //最多查出多少条,-1为不限制
 )
 
-var DB *sql.DB //数据库连接
-var Beforefun Before
-var Afterfun After
+
+var (
+	DB *sql.DB //数据库连接
+	Beforefun Before
+	Afterfun After
+	Driver string
+)
 
 func init() {
 	SetConn("mysql", "root:@tcp(localhost:3306)/praise_auth?charset=utf8")
@@ -404,6 +423,7 @@ type Model interface {
 */
 func SetConn(db, str string) {
 	var err error
+	Driver = db
 	switch db {
 	case "mysql":
 		DB, err = sql.Open("mysql", str)

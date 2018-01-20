@@ -6,13 +6,15 @@ import (
 	"strconv"
 
 	_ "github.com/go-sql-driver/mysql"
-	"github.com/k0kubun/pp"
 	_ "github.com/lib/pq"
 )
 
-var sqlHsAuthApplication string
-var argsHsAuthApplication []interface{}
-var dbconnHsAuthApplication *sql.DB
+var (
+	sqlHsAuthApplication    string
+	argsHsAuthApplication   []interface{}
+	dbconnHsAuthApplication *sql.DB
+	driverHsAuthApplication string
+)
 
 type HsAuthApplication struct {
 	Id        int32  `dormCol:"id" dormMysqlType:"int(10)" dorm:"PRIMARY;unsigned;NOT NULL;AUTO_INCREMENT"`
@@ -36,6 +38,7 @@ func (hsAuthApplication HsAuthApplication) GetSql() (string, []interface{}) {
 //设置db
 func (hsAuthApplication HsAuthApplication) SetDBConn(db, str string) {
 	var err error
+	driverHsAuthApplication = db
 	switch db {
 	case "mysql":
 		dbconnHsAuthApplication, err = sql.Open("mysql", str)
@@ -57,6 +60,7 @@ func (hsAuthApplication HsAuthApplication) SetDBConn(db, str string) {
 
 func NewHsAuthApplication() HsAuthApplication {
 	dbconnHsAuthApplication = DB
+	driverHsAuthApplication = Driver
 	return HsAuthApplication{}
 }
 
@@ -74,7 +78,7 @@ func (hsAuthApplication HsAuthApplication) Select(sql string, limit, offset int,
 
 	sqlHsAuthApplication = sqlstr
 	argsHsAuthApplication = value
-	rows, err := DB.Query(sqlstr, value...)
+	rows, err := dbconnHsAuthApplication.Query(sqlstr, value...)
 	defer rows.Close()
 	if err != nil {
 		return ar, err
@@ -118,7 +122,7 @@ func (hsAuthApplication *HsAuthApplication) FindByID(id int64) (interface{}, err
 	sqlstr := "SELECT id,secret_key,app_key,name,ip,type,exp,created_at,updated_at,deleted_at,status_at FROM hs_auth_application WHERE id = ?"
 	sqlHsAuthApplication = sqlstr
 	argsHsAuthApplication = args
-	rows, err := DB.Query(sqlstr, args...)
+	rows, err := dbconnHsAuthApplication.Query(sqlstr, args...)
 	defer rows.Close()
 	if err != nil {
 		return hsAuthApplication, err
@@ -152,7 +156,7 @@ func (hsAuthApplication HsAuthApplication) Add() (int64, error) {
 	}
 	sqlstr := "INSERT INTO hs_auth_application (secret_key,app_key,name,ip,type,exp,created_at,updated_at,deleted_at,status_at) VALUES (?,?,?,?,?,?,?,?,?,?)"
 
-	stmtIns, err := DB.Prepare(sqlstr)
+	stmtIns, err := dbconnHsAuthApplication.Prepare(sqlstr)
 	Checkerr(err)
 	defer stmtIns.Close()
 	args := make([]interface{}, 10)
@@ -169,7 +173,6 @@ func (hsAuthApplication HsAuthApplication) Add() (int64, error) {
 
 	sqlHsAuthApplication = sqlstr
 	argsHsAuthApplication = args
-	pp.Println(hsAuthApplication.GetSql())
 	result, err := stmtIns.Exec(args...)
 	Checkerr(err)
 	for i := 0; i < len(Afterfun.Add); i++ { //后置hooks
@@ -182,8 +185,17 @@ func (hsAuthApplication HsAuthApplication) AddBatch(obj []interface{}) error {
 	for i := 0; i < len(Beforefun.AddBatch); i++ { //前置hooks
 		Beforefun.AddBatch[i]()
 	}
-	sqlstr := "INSERT INTO hs_auth_application (secret_key,app_key,name,ip,type,exp,created_at,updated_at,deleted_at,status_at) VALUES (?,?,?,?,?,?,?,?,?,?)"
-	tx, err := DB.Begin()
+	var argsStr string
+	switch driverHsAuthApplication {
+	case "mysql":
+		argsStr = "?,?,?,?,?,?,?,?,?,?"
+	case "mariadb":
+		argsStr = "?,?,?,?,?,?,?,?,?,?"
+	case "cockroachDB":
+		argsStr = "$1,$2,$3,$4,$5,$6,$7,$8,$9,$10"
+	}
+	sqlstr := "INSERT INTO hs_auth_application (secret_key,app_key,name,ip,type,exp,created_at,updated_at,deleted_at,status_at) VALUES (" + argsStr + ")"
+	tx, err := dbconnHsAuthApplication.Begin()
 	Checkerr(err)
 	stmt, err := tx.Prepare(sqlstr)
 	defer stmt.Close()
@@ -223,7 +235,7 @@ func (hsAuthApplication *HsAuthApplication) Update() (int64, error) {
 		Beforefun.Update[i]()
 	}
 	sqlstr := "UPDATE hs_auth_application SET secret_key=?,app_key=?,name=?,ip=?,type=?,exp=?,created_at=?,updated_at=?,deleted_at=?,status_at=? where id=?"
-	stmtIns, err := DB.Prepare(sqlstr)
+	stmtIns, err := dbconnHsAuthApplication.Prepare(sqlstr)
 	Checkerr(err)
 	defer stmtIns.Close()
 	args := make([]interface{}, 11)
@@ -253,7 +265,7 @@ func (hsAuthApplication HsAuthApplication) UpdateBatch(obj []interface{}) error 
 		Beforefun.UpdateBatch[i]()
 	}
 	sqlstr := "UPDATE hs_auth_application SET secret_key=?,app_key=?,name=?,ip=?,type=?,exp=?,created_at=?,updated_at=?,deleted_at=?,status_at=? where id=?"
-	tx, err := DB.Begin()
+	tx, err := dbconnHsAuthApplication.Begin()
 	Checkerr(err)
 	stmt, err := tx.Prepare(sqlstr)
 	defer stmt.Close()
@@ -292,7 +304,7 @@ func (hsAuthApplication HsAuthApplication) Delete() (int64, error) {
 		Beforefun.Delete[i]()
 	}
 	sqlstr := "DELETE FROM hs_auth_application WHERE id = ?"
-	stmt, err := DB.Prepare(sqlstr)
+	stmt, err := dbconnHsAuthApplication.Prepare(sqlstr)
 	Checkerr(err)
 	args := make([]interface{}, 1)
 	args[0] = hsAuthApplication.Id
@@ -313,7 +325,7 @@ func (hsAuthApplication HsAuthApplication) DeleteBatch(obj []interface{}) error 
 		Beforefun.DeleteBatch[i]()
 	}
 	sqlstr := "DELETE FROM hs_auth_application WHERE id = ?"
-	tx, err := DB.Begin()
+	tx, err := dbconnHsAuthApplication.Begin()
 	Checkerr(err)
 	stmt, err := tx.Prepare(sqlstr)
 	defer stmt.Close()
@@ -340,19 +352,15 @@ func (hsAuthApplication HsAuthApplication) Exec(sql string, value ...interface{}
 	for i := 0; i < len(Beforefun.Exec); i++ { //前置hooks
 		Beforefun.Exec[i]()
 	}
-	if _, err := DB.Exec(
-		"CREATE TABLE IF NOT EXISTS accounts (id INT PRIMARY KEY, balance INT)"); err != nil {
-		log.Fatal(err)
-	}
-	stmt, err := DB.Prepare(sql)
+
+	stmt, err := dbconnHsAuthApplication.Prepare(sql)
 	Checkerr(err)
 
 	sqlHsAuthApplication = sql
 	argsHsAuthApplication = value
 	defer stmt.Close()
-
 	result, err := stmt.Exec(value...)
-	pp.Println(hsAuthApplication.GetSql())
+
 	Checkerr(err)
 	for i := 0; i < len(Afterfun.Exec); i++ { //后置hooks
 		Afterfun.Exec[i]()
