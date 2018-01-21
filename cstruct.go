@@ -29,18 +29,18 @@ func CstructFile(c *cli.Context) error {
 	}
 	db := c.String("database")
 	sqlfile := c.String("file")
-	if db != "mysql" && db != "cockroach" {
-		fmt.Println("目前只支持mysql和cockroach")
-		return ERRNOFILE
+	if db != "mysql" && db != "cockroach" && db != "mariadb" && db != "postgresql" {
+		fmt.Println("目前只支持mysql,mariadb,postgresql,cockroach")
+		return ERRNOSQL
 	}
 	if sqlfile == "" {
 		fmt.Println("您未指定sql文件")
-		return ERRNOSQL
+		return ERRNOFILE
 	}
-	if db == "mysql" {
+	if db == "mysql" || db == "mariadb" {
 		return genStructByMysql(sqlfile)
 	}
-	if db == "cockroach" {
+	if db == "cockroach" || db == "postgresql" {
 		return genStructByCockroach(sqlfile)
 	}
 	return nil

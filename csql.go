@@ -28,19 +28,19 @@ func CsqlFile(c *cli.Context) error {
 	if !hasf {
 		file = file + "/"
 	}
-	if db != "mysql" && db != "cockroach" {
-		fmt.Println("目前只支持mysql和cockroach")
-		return ERRNOFILE
+	if db != "mysql" && db != "cockroach" && db != "mariadb" && db != "postgresql" {
+		fmt.Println("目前只支持mysql,mariadb,postgresql,cockroach")
+		return ERRNOSQL
 	}
 	if file == "" {
 		fmt.Println("您未指定struct文件")
-		return ERRNOSQL
+		return ERRNOFILE
 	}
-	if db == "mysql" {
+	if db == "mysql" || db == "mariadb" {
 		return genMysqlByStruct(file)
 
 	}
-	if db == "cockroach" {
+	if db == "cockroach" || db == "postgresql" {
 		return genCockroachSqlByStruct(file)
 	}
 	return nil

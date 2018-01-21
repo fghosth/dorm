@@ -29,12 +29,12 @@ func CmodelFile(c *cli.Context) error {
 	} else {
 		COVRE = false
 	}
-	db := c.String("database")
+	// db := c.String("database")
 	file := c.String("file")
-	if db != "mysql" && db != "cockroach" {
-		fmt.Println("目前只支持mysql和cockroach")
-		return M_ERRNOSQL
-	}
+	// if db != "mysql" && db != "cockroach" {
+	// 	fmt.Println("目前只支持mysql和cockroach")
+	// 	return M_ERRNOSQL
+	// }
 	if file == "" {
 		fmt.Println("您未指定struct文件")
 		return M_ERRNOFILE
@@ -47,18 +47,18 @@ func CmodelFile(c *cli.Context) error {
 				return err
 			}
 			if !f.IsDir() {
-				createModel(path, db)
+				createModel(path)
 			}
 			return nil
 		})
 		return err
 	} else {
-		return createModel(file, db)
+		return createModel(file)
 	}
 
 }
 
-func createBaseModel() {
+func createBaseModel() error {
 	Str := dorm.CreateModel(m_packageName)
 	os.Mkdir(structPath, os.ModePerm) //在当前目录下生成md目录
 	//生成文件
@@ -66,41 +66,41 @@ func createBaseModel() {
 	exist, err := ut.FileOrPathExists(m_modelPath + fileName)
 	if !COVRE && exist {
 		fmt.Println(util.Red(m_modelPath + fileName + "文件已存在"))
-		// return err
+		return err
 	}
 	sf, err := os.Create(m_modelPath + fileName)
 	if err != nil {
 		fmt.Println(err)
-		// return err
+		return err
 	}
 	_, err = sf.Write([]byte(Str))
 	if err != nil {
 		fmt.Println(err)
-		// return err
+		return err
 	}
 	// pp.Println(err)
 	if !(!COVRE && exist) && err == nil {
 		fmt.Println(m_modelPath + fileName + "生成成功")
 	}
-
+	return nil
 }
 
 //根据cockroach脚本生成struct
-func createModel(file, db string) error {
+func createModel(file string) error {
 	sl := new(lexer.StructLexer)
 	fileStr := sl.GetStructFile(file)
 	arrStruct := sl.StructStr(fileStr)
 	os.Mkdir(structPath, os.ModePerm) //在当前目录下生成md目录
 
 	for _, v := range arrStruct {
-		Str := dorm.CreateDorm(m_packageName, db, v)
+		Str := dorm.CreateDorm(m_packageName, v)
 		tname := ut.CalToUnder(sl.StructName(v))
 		//生成文件
 		fileName := tname + ".go"
 		exist, err := ut.FileOrPathExists(m_modelPath + fileName)
 		if !COVRE && exist {
 			fmt.Println(util.Red(m_modelPath + fileName + "文件已存在"))
-			// return err
+			return err
 		}
 		sf, err := os.Create(m_modelPath + fileName)
 		if err != nil {

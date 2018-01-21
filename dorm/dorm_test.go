@@ -27,11 +27,20 @@ func TestCreateDorm(t *testing.T) {
 	fileStr := sl.GetStructFile(file)
 	arrStruct := sl.StructStr(fileStr)
 	for _, v := range arrStruct {
-		Str := dorm.CreateDorm("ormstruct", "mysql", v)
+		Str := dorm.CreateDorm("ormstruct", v)
 		fmt.Println(Str)
 	}
-
 }
+
+// func TestCreateGetArgsStrFun(t *testing.T) {
+// 	sl := new(lexer.StructLexer)
+// 	fileStr := sl.GetStructFile(file)
+// 	arrStruct := sl.StructStr(fileStr)
+// 	for _, v := range arrStruct {
+// 		Str := dorm.CreateGetArgsStrFun(v)
+// 		fmt.Println(Str)
+// 	}
+// }
 
 // func TestCreateField(t *testing.T) {
 // 	sl := new(lexer.StructLexer)

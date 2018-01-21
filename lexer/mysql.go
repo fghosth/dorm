@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"reflect"
 	"regexp"
+	"strconv"
 	"strings"
 
 	"github.com/aymerick/raymond"
@@ -20,15 +21,25 @@ var (
 	//匹配所有字段
 	col = "`.+`"
 	//匹配字段属性
-	property = `(?i)\b(NOT NULL|(DEFAULT.+)|AUTO_INCREMENT|unsigned|zerofill|COMMENT.+'|PRIMARY.+,)`
+	property = `(?i)\b(NOT NULL|(DEFAULT.+)|AUTO_INCREMENT|unsigned|zerofill|PRIMARY.+,)`
 	//找出所以cerate table代码段
 	createTable = `(?i)(CREATE TABLE)[\W\w]+?;`
 	//为创造table的语句按字段分行
 	colLine = `.+,`
 	//找到PRIMARY KEY行
 	primaryKeyLine = `(?i)(PRIMARY KEY).+`
+	//找到UNIQUE KEY的行
+	uniqueKeyLine = `(?i)(UNIQUE KEY).+`
 	//找到index 行TODO
 	indexLine = `(?i)(KEY).+`
+	//在(`开始`)结束之间的内容
+	sContent = "\\(\\`[\\W\\w]+?\\`\\)"
+	//找到所有索引行KEY
+	keyIndex = `([^a-zA-Z\n]+[ ]+KEY).+`
+	//找到comment
+	comment = `(?i)\b(COMMENT.+')`
+	//查到所有insert语句
+	insertSql = `(?i)(insert into)[\w\W]+?;`
 )
 
 var (
@@ -48,8 +59,8 @@ var (
 		"tinyint":    "int8",
 		"smallint":   "int16",
 		"mediumint":  "int32",
-		"int":        "int32",
-		"integer":    "int32",
+		"int":        "int64",
+		"integer":    "int64",
 		"bigint":     "int64",
 		"date":       "string",
 		"datetime":   "string",
@@ -76,6 +87,38 @@ var (
 		"set":        "string",
 		"json":       "string",
 	}
+	MysqlToCockroach = map[string]string{
+		"tinyint":    "SMALLINT",
+		"smallint":   "SMALLINT",
+		"mediumint":  "INT4",
+		"int":        "INT",
+		"integer":    "INT",
+		"bigint":     "INT",
+		"date":       "DATE",
+		"datetime":   "TIMESTAMP",
+		"time":       "STRING",
+		"bit":        "SMALLINT",
+		"bool":       "BOOL",
+		"tinytext":   "STRING",
+		"mediumtext": "STRING",
+		"longtext":   "STRING",
+		"text":       "STRING",
+		"tinyblob":   "BYTES",
+		"mediumblob": "BYTES",
+		"longblob":   "BYTES",
+		"blob":       "BYTES",
+		"float":      "FLOAT",
+		"double":     "REAL",
+		"decimal":    "DECIMAL",
+		"timestamp":  "TIMESTAMP",
+		"year":       "STRING",
+		"char":       "STRING",
+		"varchar":    "STRING",
+		"varbinary":  "BYTES",
+		"enum":       "STRING",
+		"set":        "STRING",
+		"json":       "STRING",
+	}
 )
 
 type MysqlLexer struct {
@@ -86,6 +129,127 @@ var (
 	dat       []byte //加载的文件
 	splitFlag = " "  //在tag中标识类似commit-'用户id'的分隔符
 )
+
+func (ml MysqlLexer) CreateCockInsertSqlFromMysql(insertStr []string) string {
+
+	//根据模板生成
+	ctx := map[string]interface{}{
+		"field": insertStr,
+	}
+
+	cocksql, err := raymond.Render(COCKROACH_INSERT_TMP, ctx)
+	if err != nil {
+		fmt.Println(err)
+	}
+	return cocksql
+}
+
+func (ml MysqlLexer) InsertStr(sqlStr string) []string {
+	sqlStr = strings.Replace(sqlStr, "`", `"`, -1)
+	r := regexp.MustCompile(insertSql)
+	str := r.FindAllString(sqlStr, -1)
+	return str
+}
+
+//根据mysql脚本生成cockroachDB脚本(创建表),支持primaryKey Index Unique DEFAULT值（其中index不支持联合索引--会拆分为多个索引）
+func (ml MysqlLexer) CreateCockroachSqlFromMysql(tableStr string) string {
+	tableName := ml.TableName(tableStr)
+
+	field := ml.Field(tableStr)
+	flist := make([]string, len(field))
+
+	pk := ml.Primarykey(tableStr)
+	indexk := ml.IndexKey(tableStr)
+	uq := ml.Uniquekey(tableStr)
+	for i, v := range field {
+		if i == 0 && ut.ContainStrBysplit(pk, v["colName"].(string), ",") {
+
+			flist[i] = v["colName"].(string) + " SERIAL" + getCockProperty(v["cockDBType"].(string), v["property"].([]string))
+
+		} else {
+			flist[i] = v["colName"].(string) + " " + v["cockDBType"].(string) + getCockProperty(v["cockDBType"].(string), v["property"].([]string))
+		}
+		if i < len(field)-1 {
+			flist[i] = flist[i] + ","
+		} else {
+			if pk != "" || indexk != "" || uq != "" {
+				flist[i] = flist[i] + ","
+			}
+		}
+	}
+	if pk != "" { //PRIMARY KEY
+		pk = "PRIMARY KEY (" + pk + ")"
+		if uq != "" || indexk != "" {
+			pk = pk + ","
+		}
+	}
+	if uq != "" { //UNIQUE
+		uq = "UNIQUE (" + uq + ")"
+		if indexk != "" {
+			uq = uq + ","
+		}
+	}
+	var ik []string
+	if indexk != "" { //INDEX
+		arrik := strings.Split(indexk, ",")
+		ik = make([]string, len(arrik))
+		for i, v := range arrik {
+			ik[i] = "INDEX " + tableName + "_index_" + strconv.Itoa(i) + " (" + v + ")"
+			if i < len(arrik)-1 {
+				ik[i] = ik[i] + ","
+			}
+		}
+
+	}
+	//根据模板生成
+	ctx := map[string]interface{}{
+		"tableName": tableName,
+		"field":     flist,
+		"pk":        pk,
+		"ik":        ik,
+		"uq":        uq,
+	}
+
+	cocksql, err := raymond.Render(COCKROACH_SCRIPT_TMP, ctx)
+	if err != nil {
+		fmt.Println(err)
+	}
+	return cocksql
+}
+
+func getCockProperty(ftype string, dormStr []string) (pstr string) {
+	for _, v := range dormStr {
+		//处理comment
+		r := regexp.MustCompile(comment)
+		commstr := r.FindString(v)
+		r = regexp.MustCompile(comment)
+		v := r.ReplaceAllString(v, "")
+		v = strings.TrimSpace(v)
+		if v == "NOT NULL" {
+			pstr = pstr + " NOT NULL"
+		}
+		if commstr != "" {
+			// pp.Println(commstr)
+		}
+		if strings.Contains(v, "DEFAULT") {
+			var value string //default 的默认值
+			arrvalue := strings.Split(v, " ")
+			if len(arrvalue) > 1 {
+				value = strings.Replace(arrvalue[1], "'", "", -1) //去除'
+			}
+			switch value {
+			case "CURRENT_TIMESTAMP":
+				pstr = pstr + " DEFAULT current_timestamp()"
+			case "NULL":
+				pstr = pstr + " DEFAULT NULL"
+			default:
+				pstr = pstr + " DEFAULT '" + value + "':::" + ftype
+			}
+		}
+
+	}
+	return
+}
 
 //根据struct-字符串成数据库sql
 func (ml MysqlLexer) CreateSqlByStructStr(strStruct string) string {
@@ -230,7 +394,7 @@ func (ml MysqlLexer) Field(tableStr string) []map[string]interface{} {
 		if coln != "" { //字段名不能为空 不是字段
 			colmap := make(map[string]interface{})
 			colmap["colName"] = coln
-			colmap["sqltype"], colmap["goType"] = getColTypeByLine(v)
+			colmap["sqltype"], colmap["goType"], colmap["cockDBType"] = getColTypeByLine(v)
 			colmap["property"] = getColptyByLine(v, pk)
 			field = append(field, colmap)
 
@@ -245,7 +409,8 @@ func getColptyByLine(str, pk string) []string {
 	pty := ""
 	r := regexp.MustCompile(property)
 	ptylist := r.FindAllString(str, -1)
-	if getColnameByLine(str) == pk {
+	// pp.Println(ut.ContainStrBysplit(pk, getColnameByLine(str), ","))
+	if ut.ContainStrBysplit(pk, getColnameByLine(str), ",") {
 		pty = "PRIMARY"
 	}
 	for _, v := range ptylist {
@@ -262,13 +427,14 @@ func getColptyByLine(str, pk string) []string {
 }
 
 //根据行取出字段类型
-func getColTypeByLine(str string) (sqltype, gotype string) {
+func getColTypeByLine(str string) (sqltype, gotype, cockDBtype string) {
 
 	r := regexp.MustCompile(sqlType)
 	sqltype = r.FindString(str)
 	r = regexp.MustCompile(`\(.+\)`)
 	tmap := r.ReplaceAllString(sqltype, "")
 	gotype = MysqlToStructMap[tmap]
+	cockDBtype = MysqlToCockroach[tmap]
 	// pp.Println(gotype)
 	return
 }
@@ -299,6 +465,40 @@ func (ml MysqlLexer) Primarykey(tableStr string) string {
 	pline := r.FindString(tableStr)
 	pk := ut.PixContent(pline, "`")
 	return pk
+}
+
+//获取某一个table的Uniquekey
+func (ml MysqlLexer) Uniquekey(tableStr string) string {
+	var uq string
+	r := regexp.MustCompile(uniqueKeyLine)
+	pline := r.FindAllString(tableStr, -1)
+
+	for _, v := range pline {
+		r = regexp.MustCompile(sContent)
+		if uq == "" {
+			uq = ut.PixContent(r.FindString(v), "`")
+		} else {
+			uq = uq + "," + ut.PixContent(r.FindString(v), "`")
+		}
+	}
+	return uq
+}
+
+//获取某一个table的Indexkey
+func (ml MysqlLexer) IndexKey(tableStr string) string {
+	var index string
+	r := regexp.MustCompile(keyIndex)
+	pline := r.FindAllString(tableStr, -1)
+
+	for _, v := range pline {
+		r = regexp.MustCompile(sContent)
+		if index == "" {
+			index = ut.PixContent(r.FindString(v), "`")
+		} else {
+			index = index + "," + ut.PixContent(r.FindString(v), "`")
+		}
+	}
+	return index
 }
 
 //获取sql脚本

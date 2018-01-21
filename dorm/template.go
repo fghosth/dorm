@@ -48,9 +48,10 @@ func ({{{objvar}}} *{{{obj}}}) FindByID(id int64) (interface{}, error) {
 	for i := 0; i < len(Beforefun.FindByID); i++ { //前置hooks
 		Beforefun.FindByID[i]()
 	}
+	argsStr := get{{{obj}}}ArgsStr(1)
 	args := make([]interface{}, 1)
 	args[0] = id
-	sqlstr := "SELECT {{{fields}}} FROM {{{tableName}}} WHERE {{{sqlField}}} = ?"
+	sqlstr := "SELECT {{{fields}}} FROM {{{tableName}}} WHERE {{{sqlField}}} = " + argsStr
 	sql{{{obj}}} = sqlstr
 	args{{{obj}}} = args
 	rows, err := dbconn{{{obj}}}.Query(sqlstr, args...)
@@ -79,7 +80,8 @@ func ({{{objvar}}} {{{obj}}}) Add() (int64, error) {
 	for i := 0; i < len(Beforefun.Add); i++ { //前置hooks
 		Beforefun.Add[i]()
 	}
-	sqlstr := "INSERT INTO {{{tableName}}} ({{{fields}}}) VALUES ({{{parms}}})"
+	argsStr := get{{{obj}}}ArgsStr({{{len}}})
+	sqlstr := "INSERT INTO {{{tableName}}} ({{{fields}}}) VALUES (" + argsStr + ")"
 
 	stmtIns, err := dbconn{{{obj}}}.Prepare(sqlstr)
 	Checkerr(err)
@@ -103,16 +105,8 @@ func ({{{objvar}}} {{{obj}}}) AddBatch(obj []interface{}) error {
 	for i := 0; i < len(Beforefun.AddBatch); i++ { //前置hooks
 		Beforefun.AddBatch[i]()
 	}
-	var argsStr string
-	switch driverHsAuthApplication {
-	case "mysql":
-		argsStr = "{{{mysqlparms}}}"
-	case "mariadb":
-		argsStr = "{{{mysqlparms}}}"
-	case "cockroachDB":
-		argsStr = "{{{cockroachparms}}}"
-	}
-	sqlstr := "INSERT INTO {{{tableName}}} ({{{fields}}}) VALUES ("+argsStr+")"
+	argsStr := get{{{obj}}}ArgsStr({{{len}}})
+	sqlstr := "INSERT INTO {{{tableName}}} ({{{fields}}}) VALUES (" + argsStr + ")"
 	tx, err := dbconn{{{obj}}}.Begin()
 	Checkerr(err)
 	stmt, err := tx.Prepare(sqlstr)
@@ -145,7 +139,8 @@ func ({{{objvar}}} *{{{obj}}}) Update() (int64, error) {
 	for i := 0; i < len(Beforefun.Update); i++ { //前置hooks
 		Beforefun.Update[i]()
 	}
-	sqlstr := "UPDATE {{{tableName}}} SET {{{fields}}} where {{{sqlField}}}=?"
+	argsStr := get{{{obj}}}ArgsStrUpdate()
+	sqlstr := "UPDATE {{{tableName}}} SET " + argsStr
 	stmtIns, err := dbconn{{{obj}}}.Prepare(sqlstr)
 	Checkerr(err)
 	defer stmtIns.Close()
@@ -168,7 +163,8 @@ func ({{{objvar}}} {{{obj}}}) UpdateBatch(obj []interface{}) error {
 	for i := 0; i < len(Beforefun.UpdateBatch); i++ { //前置hooks
 		Beforefun.UpdateBatch[i]()
 	}
-	sqlstr := "UPDATE {{{tableName}}} SET {{{fields}}} where {{{sqlField}}}=?"
+	argsStr := get{{{obj}}}ArgsStrUpdate()
+	sqlstr := "UPDATE {{{tableName}}} SET " + argsStr
 	tx, err := dbconn{{{obj}}}.Begin()
 	Checkerr(err)
 	stmt, err := tx.Prepare(sqlstr)
@@ -200,7 +196,8 @@ func ({{{objvar}}} {{{obj}}}) Delete() (int64, error) {
 	for i := 0; i < len(Beforefun.Delete); i++ { //前置hooks
 		Beforefun.Delete[i]()
 	}
-  sqlstr := "DELETE FROM {{{tableName}}} WHERE {{{sqlField}}} = ?"
+	argsStr := get{{{obj}}}ArgsStr(1)
+  sqlstr := "DELETE FROM {{{tableName}}} WHERE {{{sqlField}}} = " + argsStr
 	stmt, err := dbconn{{{obj}}}.Prepare(sqlstr)
 	Checkerr(err)
 	args := make([]interface{}, 1)
@@ -222,7 +219,8 @@ func ({{{objvar}}} {{{obj}}}) DeleteBatch(obj []interface{}) error {
 	for i := 0; i < len(Beforefun.DeleteBatch); i++ { //前置hooks
 		Beforefun.DeleteBatch[i]()
 	}
-	sqlstr := "DELETE FROM {{{tableName}}} WHERE {{{sqlField}}} = ?"
+	argsStr := get{{{obj}}}ArgsStr(1)
+	sqlstr := "DELETE FROM {{{tableName}}} WHERE {{{sqlField}}} = " + argsStr
 	tx, err := dbconn{{{obj}}}.Begin()
 	Checkerr(err)
 	stmt, err := tx.Prepare(sqlstr)
@@ -267,6 +265,64 @@ func ({{{objvar}}} {{{obj}}}) Exec(sql string, value ...interface{}) (int64, err
 	return result.RowsAffected()
 }
 `
+	GetArgsStrFun_TPL = `
+	//获得args字符串(除了update)
+	func get{{{obj}}}ArgsStr(num int) string {
+		var argsStr string
+		switch driverHsAuthApplication {
+		case "mysql":
+			for i := 0; i < num; i++ {
+				if argsStr == "" {
+					argsStr = "?"
+				} else {
+					argsStr = argsStr + ",?"
+				}
+			}
+		case "mariadb":
+			for i := 0; i < num; i++ {
+				if argsStr == "" {
+					argsStr = "?"
+				} else {
+					argsStr = argsStr + ",?"
+				}
+			}
+		case "cockroachDB":
+			for i := 0; i < num; i++ {
+				if argsStr == "" {
+					argsStr = "$" + strconv.Itoa(i+1)
+				} else {
+					argsStr = argsStr + ",$" + strconv.Itoa(i+1)
+				}
+			}
+		case "postgresql":
+			for i := 0; i < num; i++ {
+				if argsStr == "" {
+					argsStr = "$" + strconv.Itoa(i+1)
+				} else {
+					argsStr = argsStr + ",$" + strconv.Itoa(i+1)
+				}
+			}
+		}
+		return argsStr
+	}
+
+	//获得args字符串(update)
+	func get{{{obj}}}ArgsStrUpdate() string {
+		var argsStr string
+		switch driverHsAuthApplication {
+		case "mysql":
+			argsStr = "{{{mysqlField}}}"
+		case "mariadb":
+			argsStr = "{{{mariadbField}}}"
+		case "cockroachDB":
+			argsStr = "{{{cockroachDBField}}}"
+		case "postgresql":
+			argsStr = "{{{postgresqlField}}}"
+		}
+		return argsStr
+	}
+
+`
 	Field_TPL = `
 var (
 	sql{{{obj}}} string
@@ -299,17 +355,22 @@ func ({{{objvar}}} {{{obj}}}) SetDBConn(db, str string) {
 	case "mysql":
 		dbconn{{{obj}}}, err = sql.Open("mysql", str)
 		if err != nil {
-			log.Fatal("error connecting to the database: ", err)
+			log.Fatal("数据库连接错误: ", err)
 		}
 	case "mariadb":
 		dbconn{{{obj}}}, err = sql.Open("mysql", str)
 		if err != nil {
-			log.Fatal("error connecting to the database: ", err)
+			log.Fatal("数据库连接错误: ", err)
 		}
 	case "cockroachDB":
 		dbconn{{{obj}}}, err = sql.Open("postgres", str)
 		if err != nil {
-			log.Fatal("error connecting to the database: ", err)
+			log.Fatal("数据库连接错误: ", err)
+		}
+	case "postgresql":
+		dbconn{{{obj}}}, err = sql.Open("postgres", str)
+		if err != nil {
+			log.Fatal("数据库连接错误: ", err)
 		}
 	}
 }
@@ -345,7 +406,8 @@ var (
 )
 
 func init() {
-	SetConn("mysql", "root:@tcp(localhost:3306)/praise_auth?charset=utf8")
+	// SetConn("mysql", "root:@tcp(localhost:3306)/praise_auth?charset=utf8")
+	SetConn("cockroachDB", "postgresql://derek:123456@localhost:26257/auth?sslmode=disable")
 }
 
 /*
@@ -428,17 +490,22 @@ func SetConn(db, str string) {
 	case "mysql":
 		DB, err = sql.Open("mysql", str)
 		if err != nil {
-			log.Fatal("error connecting to the database: ", err)
+			log.Fatal("数据库连接错误: ", err)
 		}
 	case "mariadb":
 		DB, err = sql.Open("mysql", str)
 		if err != nil {
-			log.Fatal("error connecting to the database: ", err)
+			log.Fatal("数据库连接错误: ", err)
 		}
 	case "cockroachDB":
 		DB, err = sql.Open("postgres", str)
 		if err != nil {
-			log.Fatal("error connecting to the database: ", err)
+			log.Fatal("数据库连接错误: ", err)
+		}
+	case "postgresql":
+		DB, err = sql.Open("postgres", str)
+		if err != nil {
+			log.Fatal("数据库连接错误: ", err)
 		}
 	}
 

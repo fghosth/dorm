@@ -17,7 +17,7 @@ var (
 )
 
 type HsAuthApplication struct {
-	Id        int32  `dormCol:"id" dormMysqlType:"int(10)" dorm:"PRIMARY;unsigned;NOT NULL;AUTO_INCREMENT"`
+	Id        int64  `dormCol:"id" dormMysqlType:"int(10)" dorm:"PRIMARY;unsigned;NOT NULL;AUTO_INCREMENT"`
 	SecretKey string `dormCol:"secret_key" dormMysqlType:"varchar(128)" dorm:"NOT NULL"`
 	AppKey    string `dormCol:"app_key" dormMysqlType:"varchar(128)" dorm:"NOT NULL"`
 	Name      string `dormCol:"name" dormMysqlType:"varchar(256)" dorm:"NOT NULL"`
@@ -43,17 +43,22 @@ func (hsAuthApplication HsAuthApplication) SetDBConn(db, str string) {
 	case "mysql":
 		dbconnHsAuthApplication, err = sql.Open("mysql", str)
 		if err != nil {
-			log.Fatal("error connecting to the database: ", err)
+			log.Fatal("数据库连接错误: ", err)
 		}
 	case "mariadb":
 		dbconnHsAuthApplication, err = sql.Open("mysql", str)
 		if err != nil {
-			log.Fatal("error connecting to the database: ", err)
+			log.Fatal("数据库连接错误: ", err)
 		}
 	case "cockroachDB":
 		dbconnHsAuthApplication, err = sql.Open("postgres", str)
 		if err != nil {
-			log.Fatal("error connecting to the database: ", err)
+			log.Fatal("数据库连接错误: ", err)
+		}
+	case "postgresql":
+		dbconnHsAuthApplication, err = sql.Open("postgres", str)
+		if err != nil {
+			log.Fatal("数据库连接错误: ", err)
 		}
 	}
 }
@@ -62,6 +67,62 @@ func NewHsAuthApplication() HsAuthApplication {
 	dbconnHsAuthApplication = DB
 	driverHsAuthApplication = Driver
 	return HsAuthApplication{}
+}
+
+//获得args字符串(除了update)
+func getArgsStr(num int) string {
+	var argsStr string
+	switch driverHsAuthApplication {
+	case "mysql":
+		for i := 0; i < num; i++ {
+			if argsStr == "" {
+				argsStr = "?"
+			} else {
+				argsStr = argsStr + ",?"
+			}
+		}
+	case "mariadb":
+		for i := 0; i < num; i++ {
+			if argsStr == "" {
+				argsStr = "?"
+			} else {
+				argsStr = argsStr + ",?"
+			}
+		}
+	case "cockroachDB":
+		for i := 0; i < num; i++ {
+			if argsStr == "" {
+				argsStr = "$" + strconv.Itoa(i+1)
+			} else {
+				argsStr = argsStr + ",$" + strconv.Itoa(i+1)
+			}
+		}
+	case "postgresql":
+		for i := 0; i < num; i++ {
+			if argsStr == "" {
+				argsStr = "$" + strconv.Itoa(i+1)
+			} else {
+				argsStr = argsStr + ",$" + strconv.Itoa(i+1)
+			}
+		}
+	}
+	return argsStr
+}
+
+//获得args字符串(update)
+func getArgsStrUpdate() string {
+	var argsStr string
+	switch driverHsAuthApplication {
+	case "mysql":
+		argsStr = "secret_key=?,app_key=?,name=?,ip=?,type=?,exp=?,created_at=?,updated_at=?,deleted_at=?,status_at=? WHERE id=?"
+	case "mariadb":
+		argsStr = "secret_key=?,app_key=?,name=?,ip=?,type=?,exp=?,created_at=?,updated_at=?,deleted_at=?,status_at=? WHERE id=?"
+	case "cockroachDB":
+		argsStr = "secret_key=$1,app_key=$2,name=$3,ip=$4,type=$5,exp=$6,created_at=$7,updated_at=$8,deleted_at=$9,status_at=$10 WHERE id=$11"
+	case "postgresql":
+		argsStr = "secret_key=$1,app_key=$2,name=$3,ip=$4,type=$5,exp=$6,created_at=$7,updated_at=$8,deleted_at=$9,status_at=$10 WHERE id=$11"
+	}
+	return argsStr
 }
 
 func (hsAuthApplication HsAuthApplication) Select(sql string, limit, offset int, value ...interface{}) ([]interface{}, error) {
@@ -117,9 +178,10 @@ func (hsAuthApplication *HsAuthApplication) FindByID(id int64) (interface{}, err
 	for i := 0; i < len(Beforefun.FindByID); i++ { //前置hooks
 		Beforefun.FindByID[i]()
 	}
+	argsStr := getArgsStr(1)
 	args := make([]interface{}, 1)
 	args[0] = id
-	sqlstr := "SELECT id,secret_key,app_key,name,ip,type,exp,created_at,updated_at,deleted_at,status_at FROM hs_auth_application WHERE id = ?"
+	sqlstr := "SELECT id,secret_key,app_key,name,ip,type,exp,created_at,updated_at,deleted_at,status_at FROM hs_auth_application WHERE id = " + argsStr
 	sqlHsAuthApplication = sqlstr
 	argsHsAuthApplication = args
 	rows, err := dbconnHsAuthApplication.Query(sqlstr, args...)
@@ -154,7 +216,8 @@ func (hsAuthApplication HsAuthApplication) Add() (int64, error) {
 	for i := 0; i < len(Beforefun.Add); i++ { //前置hooks
 		Beforefun.Add[i]()
 	}
-	sqlstr := "INSERT INTO hs_auth_application (secret_key,app_key,name,ip,type,exp,created_at,updated_at,deleted_at,status_at) VALUES (?,?,?,?,?,?,?,?,?,?)"
+	argsStr := getArgsStr(10)
+	sqlstr := "INSERT INTO hs_auth_application (secret_key,app_key,name,ip,type,exp,created_at,updated_at,deleted_at,status_at) VALUES (" + argsStr + ")"
 
 	stmtIns, err := dbconnHsAuthApplication.Prepare(sqlstr)
 	Checkerr(err)
@@ -185,15 +248,7 @@ func (hsAuthApplication HsAuthApplication) AddBatch(obj []interface{}) error {
 	for i := 0; i < len(Beforefun.AddBatch); i++ { //前置hooks
 		Beforefun.AddBatch[i]()
 	}
-	var argsStr string
-	switch driverHsAuthApplication {
-	case "mysql":
-		argsStr = "?,?,?,?,?,?,?,?,?,?"
-	case "mariadb":
-		argsStr = "?,?,?,?,?,?,?,?,?,?"
-	case "cockroachDB":
-		argsStr = "$1,$2,$3,$4,$5,$6,$7,$8,$9,$10"
-	}
+	argsStr := getArgsStr(10)
 	sqlstr := "INSERT INTO hs_auth_application (secret_key,app_key,name,ip,type,exp,created_at,updated_at,deleted_at,status_at) VALUES (" + argsStr + ")"
 	tx, err := dbconnHsAuthApplication.Begin()
 	Checkerr(err)
@@ -234,7 +289,8 @@ func (hsAuthApplication *HsAuthApplication) Update() (int64, error) {
 	for i := 0; i < len(Beforefun.Update); i++ { //前置hooks
 		Beforefun.Update[i]()
 	}
-	sqlstr := "UPDATE hs_auth_application SET secret_key=?,app_key=?,name=?,ip=?,type=?,exp=?,created_at=?,updated_at=?,deleted_at=?,status_at=? where id=?"
+	argsStr := getArgsStrUpdate()
+	sqlstr := "UPDATE hs_auth_application SET " + argsStr
 	stmtIns, err := dbconnHsAuthApplication.Prepare(sqlstr)
 	Checkerr(err)
 	defer stmtIns.Close()
@@ -264,7 +320,8 @@ func (hsAuthApplication HsAuthApplication) UpdateBatch(obj []interface{}) error 
 	for i := 0; i < len(Beforefun.UpdateBatch); i++ { //前置hooks
 		Beforefun.UpdateBatch[i]()
 	}
-	sqlstr := "UPDATE hs_auth_application SET secret_key=?,app_key=?,name=?,ip=?,type=?,exp=?,created_at=?,updated_at=?,deleted_at=?,status_at=? where id=?"
+	argsStr := getArgsStrUpdate()
+	sqlstr := "UPDATE hs_auth_application SET " + argsStr
 	tx, err := dbconnHsAuthApplication.Begin()
 	Checkerr(err)
 	stmt, err := tx.Prepare(sqlstr)
@@ -303,7 +360,8 @@ func (hsAuthApplication HsAuthApplication) Delete() (int64, error) {
 	for i := 0; i < len(Beforefun.Delete); i++ { //前置hooks
 		Beforefun.Delete[i]()
 	}
-	sqlstr := "DELETE FROM hs_auth_application WHERE id = ?"
+	argsStr := getArgsStr(1)
+	sqlstr := "DELETE FROM hs_auth_application WHERE id = " + argsStr
 	stmt, err := dbconnHsAuthApplication.Prepare(sqlstr)
 	Checkerr(err)
 	args := make([]interface{}, 1)
@@ -324,7 +382,8 @@ func (hsAuthApplication HsAuthApplication) DeleteBatch(obj []interface{}) error 
 	for i := 0; i < len(Beforefun.DeleteBatch); i++ { //前置hooks
 		Beforefun.DeleteBatch[i]()
 	}
-	sqlstr := "DELETE FROM hs_auth_application WHERE id = ?"
+	argsStr := getArgsStr(1)
+	sqlstr := "DELETE FROM hs_auth_application WHERE id = " + argsStr
 	tx, err := dbconnHsAuthApplication.Begin()
 	Checkerr(err)
 	stmt, err := tx.Prepare(sqlstr)

@@ -5,12 +5,16 @@ import (
  "log"
  "strconv"
 _ "github.com/go-sql-driver/mysql"
+_ "github.com/lib/pq"
 )
 
 
-var sqlHsAuthApi string
-var argsHsAuthApi []interface{}
-var dbconnHsAuthApi *sql.DB
+var (
+	sqlHsAuthApi string
+	argsHsAuthApi []interface{}
+	dbconnHsAuthApi *sql.DB
+	driverHsAuthApi string
+)
 
 type HsAuthApi struct {
 	Id        int32  `dormCol:"id" dormMysqlType:"int(10)" dorm:"PRIMARY;unsigned;NOT NULL;AUTO_INCREMENT"`
@@ -31,29 +35,94 @@ func (hsAuthApi HsAuthApi) GetSql() (string, []interface{}) {
 //设置db
 func (hsAuthApi HsAuthApi) SetDBConn(db, str string) {
 	var err error
+	driverHsAuthApi = db
 	switch db {
 	case "mysql":
 		dbconnHsAuthApi, err = sql.Open("mysql", str)
 		if err != nil {
-			log.Fatal("error connecting to the database: ", err)
+			log.Fatal("数据库连接错误: ", err)
 		}
 	case "mariadb":
 		dbconnHsAuthApi, err = sql.Open("mysql", str)
 		if err != nil {
-			log.Fatal("error connecting to the database: ", err)
+			log.Fatal("数据库连接错误: ", err)
 		}
 	case "cockroachDB":
 		dbconnHsAuthApi, err = sql.Open("postgres", str)
 		if err != nil {
-			log.Fatal("error connecting to the database: ", err)
+			log.Fatal("数据库连接错误: ", err)
+		}
+	case "postgresql":
+		dbconnHsAuthApi, err = sql.Open("postgres", str)
+		if err != nil {
+			log.Fatal("数据库连接错误: ", err)
 		}
 	}
 }
 
 func NewHsAuthApi() HsAuthApi {
 	dbconnHsAuthApi = DB
+	driverHsAuthApi = Driver
 	return HsAuthApi{}
 }
+
+
+	//获得args字符串(除了update)
+	func getHsAuthApiArgsStr(num int) string {
+		var argsStr string
+		switch driverHsAuthApplication {
+		case "mysql":
+			for i := 0; i < num; i++ {
+				if argsStr == "" {
+					argsStr = "?"
+				} else {
+					argsStr = argsStr + ",?"
+				}
+			}
+		case "mariadb":
+			for i := 0; i < num; i++ {
+				if argsStr == "" {
+					argsStr = "?"
+				} else {
+					argsStr = argsStr + ",?"
+				}
+			}
+		case "cockroachDB":
+			for i := 0; i < num; i++ {
+				if argsStr == "" {
+					argsStr = "$" + strconv.Itoa(i+1)
+				} else {
+					argsStr = argsStr + ",$" + strconv.Itoa(i+1)
+				}
+			}
+		case "postgresql":
+			for i := 0; i < num; i++ {
+				if argsStr == "" {
+					argsStr = "$" + strconv.Itoa(i+1)
+				} else {
+					argsStr = argsStr + ",$" + strconv.Itoa(i+1)
+				}
+			}
+		}
+		return argsStr
+	}
+
+	//获得args字符串(update)
+	func getHsAuthApiArgsStrUpdate() string {
+		var argsStr string
+		switch driverHsAuthApplication {
+		case "mysql":
+			argsStr = "api_key=?,name=?,type=?,created_at=?,updated_at=?,deleted_at=?,status_at=? WHERE id=?"
+		case "mariadb":
+			argsStr = "api_key=?,name=?,type=?,created_at=?,updated_at=?,deleted_at=?,status_at=? WHERE id=?"
+		case "cockroachDB":
+			argsStr = "api_key=$1,name=$2,type=$3,created_at=$4,updated_at=$5,deleted_at=$6,status_at=$7 WHERE id=$8"
+		case "postgresql":
+			argsStr = "api_key=$1,name=$2,type=$3,created_at=$4,updated_at=$5,deleted_at=$6,status_at=$7 WHERE id=$8"
+		}
+		return argsStr
+	}
+
 
 
 func (hsAuthApi HsAuthApi) Select(sql string, limit, offset int, value ...interface{}) ([]interface{}, error) {
@@ -70,7 +139,7 @@ func (hsAuthApi HsAuthApi) Select(sql string, limit, offset int, value ...interf
 
 	sqlHsAuthApi = sqlstr
 	argsHsAuthApi = value
-	rows, err := DB.Query(sqlstr, value...)
+	rows, err := dbconnHsAuthApi.Query(sqlstr, value...)
 	defer rows.Close()
 	if err != nil {
 		return ar, err
@@ -107,12 +176,13 @@ func (hsAuthApi *HsAuthApi) FindByID(id int64) (interface{}, error) {
 	for i := 0; i < len(Beforefun.FindByID); i++ { //前置hooks
 		Beforefun.FindByID[i]()
 	}
+	argsStr := getHsAuthApiArgsStr(1)
 	args := make([]interface{}, 1)
 	args[0] = id
-	sqlstr := "SELECT id,api_key,name,type,created_at,updated_at,deleted_at,status_at FROM hs_auth_api WHERE id = ?"
+	sqlstr := "SELECT id,api_key,name,type,created_at,updated_at,deleted_at,status_at FROM hs_auth_api WHERE id = " + argsStr
 	sqlHsAuthApi = sqlstr
 	argsHsAuthApi = args
-	rows, err := DB.Query(sqlstr, args...)
+	rows, err := dbconnHsAuthApi.Query(sqlstr, args...)
 	defer rows.Close()
 	if err != nil {
 		return hsAuthApi, err
@@ -142,9 +212,10 @@ func (hsAuthApi HsAuthApi) Add() (int64, error) {
 	for i := 0; i < len(Beforefun.Add); i++ { //前置hooks
 		Beforefun.Add[i]()
 	}
-	sqlstr := "INSERT INTO hs_auth_api (api_key,name,type,created_at,updated_at,deleted_at,status_at) VALUES (?,?,?,?,?,?,?)"
+	argsStr := getHsAuthApiArgsStr(7)
+	sqlstr := "INSERT INTO hs_auth_api (api_key,name,type,created_at,updated_at,deleted_at,status_at) VALUES (" + argsStr + ")"
 
-	stmtIns, err := DB.Prepare(sqlstr)
+	stmtIns, err := dbconnHsAuthApi.Prepare(sqlstr)
 	Checkerr(err)
 	defer stmtIns.Close()
 	args := make([]interface{}, 7)
@@ -171,8 +242,9 @@ func (hsAuthApi HsAuthApi) AddBatch(obj []interface{}) error {
 	for i := 0; i < len(Beforefun.AddBatch); i++ { //前置hooks
 		Beforefun.AddBatch[i]()
 	}
-	sqlstr := "INSERT INTO hs_auth_api (api_key,name,type,created_at,updated_at,deleted_at,status_at) VALUES (?,?,?,?,?,?,?)"
-	tx, err := DB.Begin()
+	argsStr := getHsAuthApiArgsStr(7)
+	sqlstr := "INSERT INTO hs_auth_api (api_key,name,type,created_at,updated_at,deleted_at,status_at) VALUES (" + argsStr + ")"
+	tx, err := dbconnHsAuthApi.Begin()
 	Checkerr(err)
 	stmt, err := tx.Prepare(sqlstr)
 	defer stmt.Close()
@@ -209,8 +281,9 @@ func (hsAuthApi *HsAuthApi) Update() (int64, error) {
 	for i := 0; i < len(Beforefun.Update); i++ { //前置hooks
 		Beforefun.Update[i]()
 	}
-	sqlstr := "UPDATE hs_auth_api SET api_key=?,name=?,type=?,created_at=?,updated_at=?,deleted_at=?,status_at=? where id=?"
-	stmtIns, err := DB.Prepare(sqlstr)
+	argsStr := getHsAuthApiArgsStrUpdate()
+	sqlstr := "UPDATE hs_auth_api SET " + argsStr
+	stmtIns, err := dbconnHsAuthApi.Prepare(sqlstr)
 	Checkerr(err)
 	defer stmtIns.Close()
 	args := make([]interface{}, 8)
@@ -237,8 +310,9 @@ func (hsAuthApi HsAuthApi) UpdateBatch(obj []interface{}) error {
 	for i := 0; i < len(Beforefun.UpdateBatch); i++ { //前置hooks
 		Beforefun.UpdateBatch[i]()
 	}
-	sqlstr := "UPDATE hs_auth_api SET api_key=?,name=?,type=?,created_at=?,updated_at=?,deleted_at=?,status_at=? where id=?"
-	tx, err := DB.Begin()
+	argsStr := getHsAuthApiArgsStrUpdate()
+	sqlstr := "UPDATE hs_auth_api SET " + argsStr
+	tx, err := dbconnHsAuthApi.Begin()
 	Checkerr(err)
 	stmt, err := tx.Prepare(sqlstr)
 	defer stmt.Close()
@@ -274,8 +348,9 @@ func (hsAuthApi HsAuthApi) Delete() (int64, error) {
 	for i := 0; i < len(Beforefun.Delete); i++ { //前置hooks
 		Beforefun.Delete[i]()
 	}
-  sqlstr := "DELETE FROM hs_auth_api WHERE id = ?"
-	stmt, err := DB.Prepare(sqlstr)
+	argsStr := getHsAuthApiArgsStr(1)
+  sqlstr := "DELETE FROM hs_auth_api WHERE id = " + argsStr
+	stmt, err := dbconnHsAuthApi.Prepare(sqlstr)
 	Checkerr(err)
 	args := make([]interface{}, 1)
 	args[0] = hsAuthApi.Id
@@ -296,8 +371,9 @@ func (hsAuthApi HsAuthApi) DeleteBatch(obj []interface{}) error {
 	for i := 0; i < len(Beforefun.DeleteBatch); i++ { //前置hooks
 		Beforefun.DeleteBatch[i]()
 	}
-	sqlstr := "DELETE FROM hs_auth_api WHERE id = ?"
-	tx, err := DB.Begin()
+	argsStr := getHsAuthApiArgsStr(1)
+	sqlstr := "DELETE FROM hs_auth_api WHERE id = " + argsStr
+	tx, err := dbconnHsAuthApi.Begin()
 	Checkerr(err)
 	stmt, err := tx.Prepare(sqlstr)
 	defer stmt.Close()
@@ -326,7 +402,7 @@ func (hsAuthApi HsAuthApi) Exec(sql string, value ...interface{}) (int64, error)
 		Beforefun.Exec[i]()
 	}
 
-	stmt, err := DB.Prepare(sql)
+	stmt, err := dbconnHsAuthApi.Prepare(sql)
 	Checkerr(err)
 
 	sqlHsAuthApi = sql

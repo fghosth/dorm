@@ -62,12 +62,12 @@ func main() {
 		{
 			Name:    "createsql",
 			Aliases: []string{"cs"},
-			Usage:   "根据struct生成sql脚本。支持mysql，cockroach",
+			Usage:   "根据struct生成sql脚本。支持mysql,mariadb,postgresql,cockroach",
 			Flags: []cli.Flag{
 				cli.StringFlag{
 					Name:  "database, d",
 					Value: "mysql",
-					Usage: "需生成的数据库脚本.可选值：mysql，cockroach",
+					Usage: "需生成的数据库脚本.可选值：mysql,mariadb,postgresql,cockroach",
 				},
 				cli.StringFlag{
 					Name:  "file, f",
@@ -85,15 +85,35 @@ func main() {
 			},
 		},
 		{
-			Name:    "createmodel",
-			Aliases: []string{"cm"},
-			Usage:   "根据struct生成model。包括基础的增删改查，并映射到struct。支持mysql，cockroach",
+			Name:    "MysqlToCockroach",
+			Aliases: []string{"m2c"},
+			Usage:   "根据mysql脚本生成cockroachDB脚本。只支持create table和insert语句，用于数据迁移",
 			Flags: []cli.Flag{
 				cli.StringFlag{
-					Name:  "database, d",
-					Value: "mysql",
-					Usage: "需支持的数据库脚本.可选值：mysql，cockroach",
+					Name:  "file, f",
+					Value: "",
+					Usage: "struct文件.",
 				},
+				cli.StringFlag{
+					Name:  "cover",
+					Value: "false",
+					Usage: "是否覆盖已有文件，默认值false.可选值：true，false",
+				},
+			},
+			Action: func(c *cli.Context) error {
+				return cockroachsqlFromMysql(c)
+			},
+		},
+		{
+			Name:    "createmodel",
+			Aliases: []string{"cm"},
+			Usage:   "根据struct生成model。包括基础的增删改查，并映射到struct。支持mysql,mariadb,postgresql,cockroach",
+			Flags: []cli.Flag{
+				// cli.StringFlag{
+				// 	Name:  "database, d",
+				// 	Value: "mysql",
+				// 	Usage: "需支持的数据库脚本.可选值：mysql,mariadb,postgresql,cockroach",
+				// },
 				cli.StringFlag{
 					Name:  "file, f",
 					Value: "",
@@ -112,12 +132,12 @@ func main() {
 		{
 			Name:    "createstruct",
 			Aliases: []string{"cst"},
-			Usage:   "根据数据库脚本生成struct。支持mysql，cockroach",
+			Usage:   "根据数据库脚本生成struct。支持mysql,mariadb,postgresql,cockroach",
 			Flags: []cli.Flag{
 				cli.StringFlag{
 					Name:  "database, d",
 					Value: "mysql",
-					Usage: "选择数据类型.可选值：mysql，cockroach",
+					Usage: "选择数据类型.可选值：mysql,mariadb,postgresql,cockroach",
 				},
 				cli.StringFlag{
 					Name:  "file, f",

@@ -4,7 +4,6 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
-	// _ "github.com/lib/pq"
 )
 
 const (
@@ -13,10 +12,12 @@ const (
 	MAXROWS = 1000 //最多查出多少条,-1为不限制
 )
 
-var DB *sql.DB //数据库连接
-var Beforefun Before
-var Afterfun After
-var Driver string
+var (
+	DB        *sql.DB //数据库连接
+	Beforefun Before
+	Afterfun  After
+	Driver    string
+)
 
 func init() {
 	// SetConn("mysql", "root:@tcp(localhost:3306)/praise_auth?charset=utf8")
@@ -103,14 +104,19 @@ func SetConn(db, str string) {
 	case "mysql":
 		DB, err = sql.Open("mysql", str)
 		if err != nil {
-			log.Fatal("error connecting to the database: ", err)
+			log.Fatal("数据库连接错误: ", err)
 		}
 	case "mariadb":
 		DB, err = sql.Open("mysql", str)
 		if err != nil {
-			log.Fatal("error connecting to the database: ", err)
+			log.Fatal("数据库连接错误: ", err)
 		}
 	case "cockroachDB":
+		DB, err = sql.Open("postgres", str)
+		if err != nil {
+			log.Fatal("数据库连接错误: ", err)
+		}
+	case "postgresql":
 		DB, err = sql.Open("postgres", str)
 		if err != nil {
 			log.Fatal("数据库连接错误: ", err)

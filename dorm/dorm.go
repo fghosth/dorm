@@ -15,11 +15,12 @@ var (
 	sl = new(lexer.StructLexer)
 )
 
-func CreateDorm(pkname, sqlDriver, structStr string) string {
+func CreateDorm(pkname, structStr string) string {
 	var filestring string
-	header := CreateHeader(pkname, sqlDriver) + "\n"
+	header := CreateHeader(pkname) + "\n"
 	field := CreateField(structStr) + "\n"
 	function := CreateFunction(structStr) + "\n"
+	getArgsStr := CreateGetArgsStrFun(structStr) + "\n"
 	selec := CreateSelect(structStr) + "\n"
 	findByID := CreateFindByID(structStr) + "\n"
 	add := CreateAdd(structStr) + "\n"
@@ -30,9 +31,44 @@ func CreateDorm(pkname, sqlDriver, structStr string) string {
 	deletebatch := CreateDeleteBatch(structStr) + "\n"
 	exec := CreateExec(structStr) + "\n"
 
-	filestring = header + field + structStr + "\n" + function + selec + findByID + add + addbatch + update + updatebatch + delete + deletebatch + exec
+	filestring = header + field + structStr + "\n" + function + getArgsStr + selec + findByID + add + addbatch + update + updatebatch + delete + deletebatch + exec
 	return filestring
 }
+
+func CreateGetArgsStrFun(structStr string) string {
+	obj := sl.StructName(structStr)
+	field := sl.FieldName(structStr)
+	var fields, pqfields, sqlField string
+	if len(field) > 0 {
+		sqlField = ut.CalToUnder(field[0]["field"])
+	}
+	for i, v := range field {
+		if i > 0 { //去除id
+
+			if fields == "" {
+				fields = ut.CalToUnder(v["field"]) + "=?"
+				pqfields = ut.CalToUnder(v["field"]) + "=$" + strconv.Itoa(i)
+			} else {
+				fields = fields + "," + ut.CalToUnder(v["field"]) + "=?"
+				pqfields = pqfields + "," + ut.CalToUnder(v["field"]) + "=$" + strconv.Itoa(i)
+			}
+		}
+
+	}
+	fields = fields + " WHERE " + sqlField + "=?"
+	pqfields = pqfields + " WHERE " + sqlField + "=$" + strconv.Itoa(len(field))
+	ctx := map[string]interface{}{
+		"obj":              obj,
+		"mysqlField":       fields,
+		"mariadbField":     fields,
+		"cockroachDBField": pqfields,
+		"postgresqlField":  pqfields,
+	}
+	str, err := raymond.Render(GetArgsStrFun_TPL, ctx)
+	ut.Checkerr(err)
+	return str
+}
+
 func CreateModel(pkname string) string {
 	ctx := map[string]interface{}{
 		"pkname": pkname,
@@ -52,22 +88,12 @@ func CreateField(structStr string) string {
 	return str
 }
 
-func CreateHeader(pkname, sqlDriver string) string {
+func CreateHeader(pkname string) string {
 	var imp = [...]string{`"database/sql"`, `"log"`, `"strconv"`}
-	var dbDriver string
-	// switch sqlDriver {
-	// case "mysql":
-	// 	dbDriver = "github.com/go-sql-driver/mysql"
-	// case "mariadb":
-	// 	dbDriver = "github.com/go-sql-driver/mysql"
-	// case "cockroachDB":
-	// 	dbDriver = "github.com/lib/pq"
-	// }
 
 	ctx := map[string]interface{}{
-		"field":     imp,
-		"pkname":    pkname,
-		"sqlDriver": dbDriver,
+		"field":  imp,
+		"pkname": pkname,
 	}
 	str, err := raymond.Render(Header_TPL, ctx)
 	ut.Checkerr(err)

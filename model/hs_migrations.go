@@ -1,16 +1,20 @@
-
 package model
+
 import (
- "database/sql"
- "log"
- "strconv"
-_ "github.com/go-sql-driver/mysql"
+	"database/sql"
+	"log"
+	"strconv"
+
+	_ "github.com/go-sql-driver/mysql"
+	_ "github.com/lib/pq"
 )
 
-
-var sqlHsMigrations string
-var argsHsMigrations []interface{}
-var dbconnHsMigrations *sql.DB
+var (
+	sqlHsMigrations    string
+	argsHsMigrations   []interface{}
+	dbconnHsMigrations *sql.DB
+	driverHsMigrations string
+)
 
 type HsMigrations struct {
 	Id        int32  `dormCol:"id" dormMysqlType:"int(10)" dorm:"PRIMARY;unsigned;NOT NULL;AUTO_INCREMENT"`
@@ -26,30 +30,92 @@ func (hsMigrations HsMigrations) GetSql() (string, []interface{}) {
 //设置db
 func (hsMigrations HsMigrations) SetDBConn(db, str string) {
 	var err error
+	driverHsMigrations = db
 	switch db {
 	case "mysql":
 		dbconnHsMigrations, err = sql.Open("mysql", str)
 		if err != nil {
-			log.Fatal("error connecting to the database: ", err)
+			log.Fatal("数据库连接错误: ", err)
 		}
 	case "mariadb":
 		dbconnHsMigrations, err = sql.Open("mysql", str)
 		if err != nil {
-			log.Fatal("error connecting to the database: ", err)
+			log.Fatal("数据库连接错误: ", err)
 		}
 	case "cockroachDB":
 		dbconnHsMigrations, err = sql.Open("postgres", str)
 		if err != nil {
-			log.Fatal("error connecting to the database: ", err)
+			log.Fatal("数据库连接错误: ", err)
+		}
+	case "postgresql":
+		dbconnHsMigrations, err = sql.Open("postgres", str)
+		if err != nil {
+			log.Fatal("数据库连接错误: ", err)
 		}
 	}
 }
 
 func NewHsMigrations() HsMigrations {
 	dbconnHsMigrations = DB
+	driverHsMigrations = Driver
 	return HsMigrations{}
 }
 
+//获得args字符串(除了update)
+func getHsMigrationsArgsStr(num int) string {
+	var argsStr string
+	switch driverHsAuthApplication {
+	case "mysql":
+		for i := 0; i < num; i++ {
+			if argsStr == "" {
+				argsStr = "?"
+			} else {
+				argsStr = argsStr + ",?"
+			}
+		}
+	case "mariadb":
+		for i := 0; i < num; i++ {
+			if argsStr == "" {
+				argsStr = "?"
+			} else {
+				argsStr = argsStr + ",?"
+			}
+		}
+	case "cockroachDB":
+		for i := 0; i < num; i++ {
+			if argsStr == "" {
+				argsStr = "$" + strconv.Itoa(i+1)
+			} else {
+				argsStr = argsStr + ",$" + strconv.Itoa(i+1)
+			}
+		}
+	case "postgresql":
+		for i := 0; i < num; i++ {
+			if argsStr == "" {
+				argsStr = "$" + strconv.Itoa(i+1)
+			} else {
+				argsStr = argsStr + ",$" + strconv.Itoa(i+1)
+			}
+		}
+	}
+	return argsStr
+}
+
+//获得args字符串(update)
+func getHsMigrationsArgsStrUpdate() string {
+	var argsStr string
+	switch driverHsAuthApplication {
+	case "mysql":
+		argsStr = "migration=?,batch=? WHERE id=?"
+	case "mariadb":
+		argsStr = "migration=?,batch=? WHERE id=?"
+	case "cockroachDB":
+		argsStr = "migration=$1,batch=$2 WHERE id=$3"
+	case "postgresql":
+		argsStr = "migration=$1,batch=$2 WHERE id=$3"
+	}
+	return argsStr
+}
 
 func (hsMigrations HsMigrations) Select(sql string, limit, offset int, value ...interface{}) ([]interface{}, error) {
 	for i := 0; i < len(Beforefun.Select); i++ { //前置hooks
@@ -65,16 +131,16 @@ func (hsMigrations HsMigrations) Select(sql string, limit, offset int, value ...
 
 	sqlHsMigrations = sqlstr
 	argsHsMigrations = value
-	rows, err := DB.Query(sqlstr, value...)
+	rows, err := dbconnHsMigrations.Query(sqlstr, value...)
 	defer rows.Close()
 	if err != nil {
 		return ar, err
 	}
 	columns, _ := rows.Columns()
 	values := make([]interface{}, len(columns))
-		values[0]=&hsMigrations.Id
-		values[1]=&hsMigrations.Migration
-		values[2]=&hsMigrations.Batch
+	values[0] = &hsMigrations.Id
+	values[1] = &hsMigrations.Migration
+	values[2] = &hsMigrations.Batch
 	num := 0
 	for rows.Next() {
 		if num >= MAXROWS && MAXROWS != -1 {
@@ -91,27 +157,27 @@ func (hsMigrations HsMigrations) Select(sql string, limit, offset int, value ...
 	}
 	return ar, err
 }
-	
 
 func (hsMigrations *HsMigrations) FindByID(id int64) (interface{}, error) {
 	for i := 0; i < len(Beforefun.FindByID); i++ { //前置hooks
 		Beforefun.FindByID[i]()
 	}
+	argsStr := getHsMigrationsArgsStr(1)
 	args := make([]interface{}, 1)
 	args[0] = id
-	sqlstr := "SELECT id,migration,batch FROM hs_migrations WHERE id = ?"
+	sqlstr := "SELECT id,migration,batch FROM hs_migrations WHERE id = " + argsStr
 	sqlHsMigrations = sqlstr
 	argsHsMigrations = args
-	rows, err := DB.Query(sqlstr, args...)
+	rows, err := dbconnHsMigrations.Query(sqlstr, args...)
 	defer rows.Close()
 	if err != nil {
 		return hsMigrations, err
 	}
 	columns, _ := rows.Columns()
 	values := make([]interface{}, len(columns))
-		values[0]=&hsMigrations.Id
-		values[1]=&hsMigrations.Migration
-		values[2]=&hsMigrations.Batch
+	values[0] = &hsMigrations.Id
+	values[1] = &hsMigrations.Migration
+	values[2] = &hsMigrations.Batch
 	if rows.Next() {
 		err = rows.Scan(values...)
 		Checkerr(err)
@@ -121,21 +187,21 @@ func (hsMigrations *HsMigrations) FindByID(id int64) (interface{}, error) {
 	}
 	return hsMigrations, err
 }
-	
 
 func (hsMigrations HsMigrations) Add() (int64, error) {
 	for i := 0; i < len(Beforefun.Add); i++ { //前置hooks
 		Beforefun.Add[i]()
 	}
-	sqlstr := "INSERT INTO hs_migrations (migration,batch) VALUES (?,?)"
+	argsStr := getHsMigrationsArgsStr(2)
+	sqlstr := "INSERT INTO hs_migrations (migration,batch) VALUES (" + argsStr + ")"
 
-	stmtIns, err := DB.Prepare(sqlstr)
+	stmtIns, err := dbconnHsMigrations.Prepare(sqlstr)
 	Checkerr(err)
 	defer stmtIns.Close()
 	args := make([]interface{}, 2)
-		args[0]=&hsMigrations.Migration
-		args[1]=&hsMigrations.Batch
-		
+	args[0] = &hsMigrations.Migration
+	args[1] = &hsMigrations.Batch
+
 	sqlHsMigrations = sqlstr
 	argsHsMigrations = args
 	result, err := stmtIns.Exec(args...)
@@ -145,14 +211,14 @@ func (hsMigrations HsMigrations) Add() (int64, error) {
 	}
 	return result.LastInsertId()
 }
-	
 
 func (hsMigrations HsMigrations) AddBatch(obj []interface{}) error {
 	for i := 0; i < len(Beforefun.AddBatch); i++ { //前置hooks
 		Beforefun.AddBatch[i]()
 	}
-	sqlstr := "INSERT INTO hs_migrations (migration,batch) VALUES (?,?)"
-	tx, err := DB.Begin()
+	argsStr := getHsMigrationsArgsStr(2)
+	sqlstr := "INSERT INTO hs_migrations (migration,batch) VALUES (" + argsStr + ")"
+	tx, err := dbconnHsMigrations.Begin()
 	Checkerr(err)
 	stmt, err := tx.Prepare(sqlstr)
 	defer stmt.Close()
@@ -164,9 +230,9 @@ func (hsMigrations HsMigrations) AddBatch(obj []interface{}) error {
 
 	for _, value := range obj {
 		v := value.(HsMigrations)
-	 		args[0]=v.Migration
-	 		args[1]=v.Batch
-	 		
+		args[0] = v.Migration
+		args[1] = v.Batch
+
 		_, err = stmt.Exec(args...)
 		Checkerr(err)
 	}
@@ -179,19 +245,19 @@ func (hsMigrations HsMigrations) AddBatch(obj []interface{}) error {
 	return err
 }
 
-
 func (hsMigrations *HsMigrations) Update() (int64, error) {
 	for i := 0; i < len(Beforefun.Update); i++ { //前置hooks
 		Beforefun.Update[i]()
 	}
-	sqlstr := "UPDATE hs_migrations SET migration=?,batch=? where id=?"
-	stmtIns, err := DB.Prepare(sqlstr)
+	argsStr := getHsMigrationsArgsStrUpdate()
+	sqlstr := "UPDATE hs_migrations SET " + argsStr
+	stmtIns, err := dbconnHsMigrations.Prepare(sqlstr)
 	Checkerr(err)
 	defer stmtIns.Close()
 	args := make([]interface{}, 3)
-		args[0]=&hsMigrations.Migration
-		args[1]=&hsMigrations.Batch
-		args[2]=&hsMigrations.Id
+	args[0] = &hsMigrations.Migration
+	args[1] = &hsMigrations.Batch
+	args[2] = &hsMigrations.Id
 	sqlHsMigrations = sqlstr
 	argsHsMigrations = args
 	result, err := stmtIns.Exec(args...)
@@ -202,13 +268,13 @@ func (hsMigrations *HsMigrations) Update() (int64, error) {
 	return result.RowsAffected()
 }
 
-
 func (hsMigrations HsMigrations) UpdateBatch(obj []interface{}) error {
 	for i := 0; i < len(Beforefun.UpdateBatch); i++ { //前置hooks
 		Beforefun.UpdateBatch[i]()
 	}
-	sqlstr := "UPDATE hs_migrations SET migration=?,batch=? where id=?"
-	tx, err := DB.Begin()
+	argsStr := getHsMigrationsArgsStrUpdate()
+	sqlstr := "UPDATE hs_migrations SET " + argsStr
+	tx, err := dbconnHsMigrations.Begin()
 	Checkerr(err)
 	stmt, err := tx.Prepare(sqlstr)
 	defer stmt.Close()
@@ -217,9 +283,9 @@ func (hsMigrations HsMigrations) UpdateBatch(obj []interface{}) error {
 
 	for _, value := range obj {
 		v := value.(HsMigrations)
-	 		args[0]=v.Migration
-	 		args[1]=v.Batch
-	 		args[2]=v.Id
+		args[0] = v.Migration
+		args[1] = v.Batch
+		args[2] = v.Id
 		_, err = stmt.Exec(args...)
 		Checkerr(err)
 	}
@@ -234,13 +300,13 @@ func (hsMigrations HsMigrations) UpdateBatch(obj []interface{}) error {
 	return err
 }
 
-
 func (hsMigrations HsMigrations) Delete() (int64, error) {
 	for i := 0; i < len(Beforefun.Delete); i++ { //前置hooks
 		Beforefun.Delete[i]()
 	}
-  sqlstr := "DELETE FROM hs_migrations WHERE id = ?"
-	stmt, err := DB.Prepare(sqlstr)
+	argsStr := getHsMigrationsArgsStr(1)
+	sqlstr := "DELETE FROM hs_migrations WHERE id = " + argsStr
+	stmt, err := dbconnHsMigrations.Prepare(sqlstr)
 	Checkerr(err)
 	args := make([]interface{}, 1)
 	args[0] = hsMigrations.Id
@@ -256,13 +322,13 @@ func (hsMigrations HsMigrations) Delete() (int64, error) {
 	return result.RowsAffected()
 }
 
-
 func (hsMigrations HsMigrations) DeleteBatch(obj []interface{}) error {
 	for i := 0; i < len(Beforefun.DeleteBatch); i++ { //前置hooks
 		Beforefun.DeleteBatch[i]()
 	}
-	sqlstr := "DELETE FROM hs_migrations WHERE id = ?"
-	tx, err := DB.Begin()
+	argsStr := getHsMigrationsArgsStr(1)
+	sqlstr := "DELETE FROM hs_migrations WHERE id = " + argsStr
+	tx, err := dbconnHsMigrations.Begin()
 	Checkerr(err)
 	stmt, err := tx.Prepare(sqlstr)
 	defer stmt.Close()
@@ -285,13 +351,12 @@ func (hsMigrations HsMigrations) DeleteBatch(obj []interface{}) error {
 	return err
 }
 
-
 func (hsMigrations HsMigrations) Exec(sql string, value ...interface{}) (int64, error) {
 	for i := 0; i < len(Beforefun.Exec); i++ { //前置hooks
 		Beforefun.Exec[i]()
 	}
 
-	stmt, err := DB.Prepare(sql)
+	stmt, err := dbconnHsMigrations.Prepare(sql)
 	Checkerr(err)
 
 	sqlHsMigrations = sql
@@ -305,4 +370,3 @@ func (hsMigrations HsMigrations) Exec(sql string, value ...interface{}) (int64, 
 	}
 	return result.RowsAffected()
 }
-

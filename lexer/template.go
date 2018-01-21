@@ -27,6 +27,16 @@ const (
 		 {{#each field}}
  		{{{this}}}
  	   {{/each}}
+		{{{pk}}}
+		{{{uq}}}
+		  {{#each ik}}
+		{{{this}}}
+		  {{/each}}
 	 );
+	`
+	COCKROACH_INSERT_TMP = `
+		{{#each field}}
+	 {{{this}}}
+		{{/each}}
 	`
 )

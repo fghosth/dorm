@@ -5,12 +5,16 @@ import (
  "log"
  "strconv"
 _ "github.com/go-sql-driver/mysql"
+_ "github.com/lib/pq"
 )
 
 
-var sqlHsAuthPermission string
-var argsHsAuthPermission []interface{}
-var dbconnHsAuthPermission *sql.DB
+var (
+	sqlHsAuthPermission string
+	argsHsAuthPermission []interface{}
+	dbconnHsAuthPermission *sql.DB
+	driverHsAuthPermission string
+)
 
 type HsAuthPermission struct {
 	Id        int32  `dormCol:"id" dormMysqlType:"int(10)" dorm:"PRIMARY;unsigned;NOT NULL;AUTO_INCREMENT"`
@@ -30,29 +34,94 @@ func (hsAuthPermission HsAuthPermission) GetSql() (string, []interface{}) {
 //设置db
 func (hsAuthPermission HsAuthPermission) SetDBConn(db, str string) {
 	var err error
+	driverHsAuthPermission = db
 	switch db {
 	case "mysql":
 		dbconnHsAuthPermission, err = sql.Open("mysql", str)
 		if err != nil {
-			log.Fatal("error connecting to the database: ", err)
+			log.Fatal("数据库连接错误: ", err)
 		}
 	case "mariadb":
 		dbconnHsAuthPermission, err = sql.Open("mysql", str)
 		if err != nil {
-			log.Fatal("error connecting to the database: ", err)
+			log.Fatal("数据库连接错误: ", err)
 		}
 	case "cockroachDB":
 		dbconnHsAuthPermission, err = sql.Open("postgres", str)
 		if err != nil {
-			log.Fatal("error connecting to the database: ", err)
+			log.Fatal("数据库连接错误: ", err)
+		}
+	case "postgresql":
+		dbconnHsAuthPermission, err = sql.Open("postgres", str)
+		if err != nil {
+			log.Fatal("数据库连接错误: ", err)
 		}
 	}
 }
 
 func NewHsAuthPermission() HsAuthPermission {
 	dbconnHsAuthPermission = DB
+	driverHsAuthPermission = Driver
 	return HsAuthPermission{}
 }
+
+
+	//获得args字符串(除了update)
+	func getHsAuthPermissionArgsStr(num int) string {
+		var argsStr string
+		switch driverHsAuthApplication {
+		case "mysql":
+			for i := 0; i < num; i++ {
+				if argsStr == "" {
+					argsStr = "?"
+				} else {
+					argsStr = argsStr + ",?"
+				}
+			}
+		case "mariadb":
+			for i := 0; i < num; i++ {
+				if argsStr == "" {
+					argsStr = "?"
+				} else {
+					argsStr = argsStr + ",?"
+				}
+			}
+		case "cockroachDB":
+			for i := 0; i < num; i++ {
+				if argsStr == "" {
+					argsStr = "$" + strconv.Itoa(i+1)
+				} else {
+					argsStr = argsStr + ",$" + strconv.Itoa(i+1)
+				}
+			}
+		case "postgresql":
+			for i := 0; i < num; i++ {
+				if argsStr == "" {
+					argsStr = "$" + strconv.Itoa(i+1)
+				} else {
+					argsStr = argsStr + ",$" + strconv.Itoa(i+1)
+				}
+			}
+		}
+		return argsStr
+	}
+
+	//获得args字符串(update)
+	func getHsAuthPermissionArgsStrUpdate() string {
+		var argsStr string
+		switch driverHsAuthApplication {
+		case "mysql":
+			argsStr = "app_key=?,api_key=?,created_at=?,updated_at=?,deleted_at=?,status_at=? WHERE id=?"
+		case "mariadb":
+			argsStr = "app_key=?,api_key=?,created_at=?,updated_at=?,deleted_at=?,status_at=? WHERE id=?"
+		case "cockroachDB":
+			argsStr = "app_key=$1,api_key=$2,created_at=$3,updated_at=$4,deleted_at=$5,status_at=$6 WHERE id=$7"
+		case "postgresql":
+			argsStr = "app_key=$1,api_key=$2,created_at=$3,updated_at=$4,deleted_at=$5,status_at=$6 WHERE id=$7"
+		}
+		return argsStr
+	}
+
 
 
 func (hsAuthPermission HsAuthPermission) Select(sql string, limit, offset int, value ...interface{}) ([]interface{}, error) {
@@ -69,7 +138,7 @@ func (hsAuthPermission HsAuthPermission) Select(sql string, limit, offset int, v
 
 	sqlHsAuthPermission = sqlstr
 	argsHsAuthPermission = value
-	rows, err := DB.Query(sqlstr, value...)
+	rows, err := dbconnHsAuthPermission.Query(sqlstr, value...)
 	defer rows.Close()
 	if err != nil {
 		return ar, err
@@ -105,12 +174,13 @@ func (hsAuthPermission *HsAuthPermission) FindByID(id int64) (interface{}, error
 	for i := 0; i < len(Beforefun.FindByID); i++ { //前置hooks
 		Beforefun.FindByID[i]()
 	}
+	argsStr := getHsAuthPermissionArgsStr(1)
 	args := make([]interface{}, 1)
 	args[0] = id
-	sqlstr := "SELECT id,app_key,api_key,created_at,updated_at,deleted_at,status_at FROM hs_auth_permission WHERE id = ?"
+	sqlstr := "SELECT id,app_key,api_key,created_at,updated_at,deleted_at,status_at FROM hs_auth_permission WHERE id = " + argsStr
 	sqlHsAuthPermission = sqlstr
 	argsHsAuthPermission = args
-	rows, err := DB.Query(sqlstr, args...)
+	rows, err := dbconnHsAuthPermission.Query(sqlstr, args...)
 	defer rows.Close()
 	if err != nil {
 		return hsAuthPermission, err
@@ -139,9 +209,10 @@ func (hsAuthPermission HsAuthPermission) Add() (int64, error) {
 	for i := 0; i < len(Beforefun.Add); i++ { //前置hooks
 		Beforefun.Add[i]()
 	}
-	sqlstr := "INSERT INTO hs_auth_permission (app_key,api_key,created_at,updated_at,deleted_at,status_at) VALUES (?,?,?,?,?,?)"
+	argsStr := getHsAuthPermissionArgsStr(6)
+	sqlstr := "INSERT INTO hs_auth_permission (app_key,api_key,created_at,updated_at,deleted_at,status_at) VALUES (" + argsStr + ")"
 
-	stmtIns, err := DB.Prepare(sqlstr)
+	stmtIns, err := dbconnHsAuthPermission.Prepare(sqlstr)
 	Checkerr(err)
 	defer stmtIns.Close()
 	args := make([]interface{}, 6)
@@ -167,8 +238,9 @@ func (hsAuthPermission HsAuthPermission) AddBatch(obj []interface{}) error {
 	for i := 0; i < len(Beforefun.AddBatch); i++ { //前置hooks
 		Beforefun.AddBatch[i]()
 	}
-	sqlstr := "INSERT INTO hs_auth_permission (app_key,api_key,created_at,updated_at,deleted_at,status_at) VALUES (?,?,?,?,?,?)"
-	tx, err := DB.Begin()
+	argsStr := getHsAuthPermissionArgsStr(6)
+	sqlstr := "INSERT INTO hs_auth_permission (app_key,api_key,created_at,updated_at,deleted_at,status_at) VALUES (" + argsStr + ")"
+	tx, err := dbconnHsAuthPermission.Begin()
 	Checkerr(err)
 	stmt, err := tx.Prepare(sqlstr)
 	defer stmt.Close()
@@ -204,8 +276,9 @@ func (hsAuthPermission *HsAuthPermission) Update() (int64, error) {
 	for i := 0; i < len(Beforefun.Update); i++ { //前置hooks
 		Beforefun.Update[i]()
 	}
-	sqlstr := "UPDATE hs_auth_permission SET app_key=?,api_key=?,created_at=?,updated_at=?,deleted_at=?,status_at=? where id=?"
-	stmtIns, err := DB.Prepare(sqlstr)
+	argsStr := getHsAuthPermissionArgsStrUpdate()
+	sqlstr := "UPDATE hs_auth_permission SET " + argsStr
+	stmtIns, err := dbconnHsAuthPermission.Prepare(sqlstr)
 	Checkerr(err)
 	defer stmtIns.Close()
 	args := make([]interface{}, 7)
@@ -231,8 +304,9 @@ func (hsAuthPermission HsAuthPermission) UpdateBatch(obj []interface{}) error {
 	for i := 0; i < len(Beforefun.UpdateBatch); i++ { //前置hooks
 		Beforefun.UpdateBatch[i]()
 	}
-	sqlstr := "UPDATE hs_auth_permission SET app_key=?,api_key=?,created_at=?,updated_at=?,deleted_at=?,status_at=? where id=?"
-	tx, err := DB.Begin()
+	argsStr := getHsAuthPermissionArgsStrUpdate()
+	sqlstr := "UPDATE hs_auth_permission SET " + argsStr
+	tx, err := dbconnHsAuthPermission.Begin()
 	Checkerr(err)
 	stmt, err := tx.Prepare(sqlstr)
 	defer stmt.Close()
@@ -267,8 +341,9 @@ func (hsAuthPermission HsAuthPermission) Delete() (int64, error) {
 	for i := 0; i < len(Beforefun.Delete); i++ { //前置hooks
 		Beforefun.Delete[i]()
 	}
-  sqlstr := "DELETE FROM hs_auth_permission WHERE id = ?"
-	stmt, err := DB.Prepare(sqlstr)
+	argsStr := getHsAuthPermissionArgsStr(1)
+  sqlstr := "DELETE FROM hs_auth_permission WHERE id = " + argsStr
+	stmt, err := dbconnHsAuthPermission.Prepare(sqlstr)
 	Checkerr(err)
 	args := make([]interface{}, 1)
 	args[0] = hsAuthPermission.Id
@@ -289,8 +364,9 @@ func (hsAuthPermission HsAuthPermission) DeleteBatch(obj []interface{}) error {
 	for i := 0; i < len(Beforefun.DeleteBatch); i++ { //前置hooks
 		Beforefun.DeleteBatch[i]()
 	}
-	sqlstr := "DELETE FROM hs_auth_permission WHERE id = ?"
-	tx, err := DB.Begin()
+	argsStr := getHsAuthPermissionArgsStr(1)
+	sqlstr := "DELETE FROM hs_auth_permission WHERE id = " + argsStr
+	tx, err := dbconnHsAuthPermission.Begin()
 	Checkerr(err)
 	stmt, err := tx.Prepare(sqlstr)
 	defer stmt.Close()
@@ -319,7 +395,7 @@ func (hsAuthPermission HsAuthPermission) Exec(sql string, value ...interface{}) 
 		Beforefun.Exec[i]()
 	}
 
-	stmt, err := DB.Prepare(sql)
+	stmt, err := dbconnHsAuthPermission.Prepare(sql)
 	Checkerr(err)
 
 	sqlHsAuthPermission = sql

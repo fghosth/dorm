@@ -1,12 +1,27 @@
 
 
-
+CREATE TABLE IF NOT EXISTS user_dd (
+ 		uid SERIAL NOT NULL DEFAULT current_timestamp()
+ 		name STRING NOT NULL DEFAULT 'aaa':::STRING
+ 		gender SMALLINT NOT NULL
+ 		password STRING NOT NULL
+ 		qq SMALLINT NOT NULL
+ 		account STRING NOT NULL
+ 		cellphone STRING NOT NULL
+ 		happy STRING NOT NULL DEFAULT 'aaa':::STRING
+ 		cash REAL NOT NULL DEFAULT '0':::REAL
+ 		create_time TIMESTAMP NOT NULL
+ 		update_time TIMESTAMP NOT NULL
+		PRIMARY KEY (uid,qq)
+		UNIQUE (uid,name,aaa)
+		INDEX user_dd_index_1 (updated_at,status_at)
+	 );
 	 CREATE TABLE IF NOT EXISTS hs_auth_api (
  		id INT PRIMARY KEY  NOT NULL,
  		api_key varchar NOT NULL,
  		name varchar NOT NULL,
  		type int NOT NULL DEFAULT '0',
- 		created_at int NOT NULL DEFAULT clock_timestamp(),
+ 		created_at timestamp NOT NULL DEFAULT current_timestamp(),
  		updated_at int NOT NULL,
  		deleted_at int DEFAULT NULL,
  		status_at int NOT NULL DEFAULT '1'

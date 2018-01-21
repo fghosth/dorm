@@ -20,6 +20,19 @@ func (ds *Dstring) Checkerr(err error) error {
 	return nil
 }
 
+//查看字符串是否包含在另一个字符串中比如abc是否在abc,cde,aaa中
+func (ds *Dstring) ContainStrBysplit(s, chars, sep string) bool {
+	arrS := strings.Split(s, sep)
+	isContain := false
+	for _, v := range arrS {
+		if v == chars {
+			isContain = true
+			break
+		}
+	}
+	return isContain
+}
+
 //驼峰命名转下划线命名法
 func (ds *Dstring) CalToUnder(str string) string {
 	regstr := `[A-Z][a-z0-9]+` //所有大写字母开头的词
