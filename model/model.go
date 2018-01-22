@@ -1,4 +1,3 @@
-
 package model
 
 import (
@@ -13,12 +12,11 @@ const (
 	MAXROWS = 1000 //最多查出多少条,-1为不限制
 )
 
-
 var (
-	DB *sql.DB //数据库连接
+	DB        *sql.DB //数据库连接
 	Beforefun Before
-	Afterfun After
-	Driver string
+	Afterfun  After
+	Driver    string
 )
 
 func init() {
@@ -211,4 +209,3 @@ func AddAfterFun(f func(), w string) bool {
 
 	return success
 }
-

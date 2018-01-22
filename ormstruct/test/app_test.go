@@ -14,14 +14,16 @@ func init() {
 }
 
 func TestAAExec(t *testing.T) {
-	hsAuthRecords := ormstruct.NewHsAuthApplication()
+	// var hsAuthRecords ormstruct.Model
+	hsAuthRecords := ormstruct.New()
+	// hsAuthRecords.SetDBConn("cockroachDB", "postgresql://derek:123456@localhost:26257/auth?sslmode=disable")
 	ormstruct.AddBeforeFun(func() { fmt.Println("Exec------before") }, "Exec")
 	ormstruct.AddBeforeFun(func() { fmt.Println("Exec==============before") }, "Exec")
 	ormstruct.AddAfterFun(func() { fmt.Println("Exec==============after") }, "Exec")
 	ormstruct.AddAfterFun(func() { fmt.Println("Exec=======dd=======after") }, "Exec")
 	args := make([]interface{}, 1)
 	args[0] = 315583830360326145
-	res, err := hsAuthRecords.Exec("update hs_auth_application set status_at=0 where id=$1", args...)
+	res, err := hsAuthRecords.Exec("update hs_auth_application set status_at=1 where id=$1", args...)
 	Checkerr(err)
 	pp.Println(res)
 	pp.Println(hsAuthRecords.GetSql())
@@ -59,41 +61,43 @@ func TestAADelete(t *testing.T) {
 	pp.Println(hsAuthRecords.GetSql())
 }
 
-func TestAAUpdateBatch(t *testing.T) {
-	hsAuthRecords := ormstruct.NewHsAuthApplication()
-	ormstruct.AddBeforeFun(func() { fmt.Println("UpdateBatch------before") }, "UpdateBatch")
-	ormstruct.AddBeforeFun(func() { fmt.Println("UpdateBatch==============before") }, "UpdateBatch")
-	ormstruct.AddAfterFun(func() { fmt.Println("UpdateBatch==============after") }, "UpdateBatch")
-	ormstruct.AddAfterFun(func() { fmt.Println("UpdateBatch=======dd=======after") }, "UpdateBatch")
-	args := make([]interface{}, 2)
-	args[0] = 10
-	args[1] = 315832796958982145
-	result, err := hsAuthRecords.Select("where id>$1 and id<$2", 100, 2, args...)
-	Checkerr(err)
-	for i := 0; i < len(result); i++ {
-		v := result[i].(ormstruct.HsAuthApplication)
-		v.Ip = "192.168.10." + strconv.Itoa(i)
-		result[i] = v
-	}
-
-	err = hsAuthRecords.UpdateBatch(result)
-	Checkerr(err)
-	pp.Println(result)
-	pp.Println(hsAuthRecords.GetSql())
-}
+// func TestAAUpdateBatch(t *testing.T) {
+// 	hsAuthRecords := ormstruct.NewHsAuthApplication()
+// 	ormstruct.AddBeforeFun(func() { fmt.Println("UpdateBatch------before") }, "UpdateBatch")
+// 	ormstruct.AddBeforeFun(func() { fmt.Println("UpdateBatch==============before") }, "UpdateBatch")
+// 	ormstruct.AddAfterFun(func() { fmt.Println("UpdateBatch==============after") }, "UpdateBatch")
+// 	ormstruct.AddAfterFun(func() { fmt.Println("UpdateBatch=======dd=======after") }, "UpdateBatch")
+// 	args := make([]interface{}, 2)
+// 	args[0] = 10
+// 	args[1] = 315832796958982145
+// 	result, err := hsAuthRecords.Select("where id>$1 and id<$2", 100, 2, args...)
+// 	Checkerr(err)
+// 	for i := 0; i < len(result); i++ {
+// 		v := result[i].(ormstruct.HsAuthApplication)
+// 		v.Ip = "192.168.10." + strconv.Itoa(i)
+// 		result[i] = v
+// 	}
+//
+// 	err = hsAuthRecords.UpdateBatch(result)
+// 	Checkerr(err)
+// 	pp.Println(result)
+// 	pp.Println(hsAuthRecords.GetSql())
+// }
 
 func TestAAUpdate(t *testing.T) {
-	hsAuthRecords := ormstruct.NewHsAuthApplication()
+	hsAuthRecords := ormstruct.New()
 	ormstruct.AddBeforeFun(func() { fmt.Println("Update------before") }, "Update")
 	ormstruct.AddBeforeFun(func() { fmt.Println("Update==============before") }, "Update")
 	ormstruct.AddAfterFun(func() { fmt.Println("Update==============after") }, "Update")
 	ormstruct.AddAfterFun(func() { fmt.Println("Update=======dd=======after") }, "Update")
-	_, err := hsAuthRecords.FindByID(315832796954296321)
+	_, err := hsAuthRecords.FindByID(2)
 	Checkerr(err)
+	hsAuthRecords.AppKey = "111333dd"
+	hsAuthRecords.DeletedAt = "2016-11-19 02:04:25+00:00"
 
-	hsAuthRecords.AppKey = "111333"
-	pp.Println(hsAuthRecords)
+	// pp.Println(hsAuthRecords)
 	res, err := hsAuthRecords.Update()
+	pp.Println(hsAuthRecords.AppKey)
 	Checkerr(err)
 
 	pp.Println(hsAuthRecords.GetSql())
@@ -152,7 +156,7 @@ func TestAAFindByID(t *testing.T) {
 	ormstruct.AddAfterFun(func() { fmt.Println("FindByID==============after") }, "FindByID")
 	ormstruct.AddAfterFun(func() { fmt.Println("FindByID=======dd=======after") }, "FindByID")
 
-	result, err := ar.FindByID(315832796942532609)
+	result, err := ar.FindByID(2)
 	Checkerr(err)
 	pp.Println(result)
 	pp.Println(ar.GetSql())

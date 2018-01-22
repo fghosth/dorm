@@ -2,6 +2,8 @@ package util
 
 import (
 	// "fmt"
+	"crypto/md5"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"os"
@@ -10,6 +12,13 @@ import (
 )
 
 type Dstring struct {
+}
+
+func (ds *Dstring) Md5Str(str string) string {
+	md5Ctx := md5.New()
+	md5Ctx.Write([]byte(str))
+	cipherStr := md5Ctx.Sum(nil)
+	return hex.EncodeToString(cipherStr)
 }
 
 func (ds *Dstring) Checkerr(err error) error {

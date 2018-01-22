@@ -4,6 +4,8 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
+
+	"github.com/bluele/gcache"
 )
 
 const (
@@ -17,11 +19,39 @@ var (
 	Beforefun Before
 	Afterfun  After
 	Driver    string
+	cacheLen  = 1000  //缓存条数
+	cacheTime = 100   //缓存时间 秒
+	useCache  = true  //是否使用缓存
+	cacheType = "ARC" //缓存类型:LRU,LFU,ARC
+	cache     gcache.Cache
 )
 
+//设置缓存类型
+func SetCacheType() {
+	switch cacheType {
+	case "LRU":
+		cache = gcache.New(cacheLen).LRU().Build()
+	case "LFU":
+		cache = gcache.New(cacheLen).LFU().Build()
+	case "ARC":
+		cache = gcache.New(cacheLen).ARC().Build()
+	}
+}
+
 func init() {
+	SetCacheType()
 	// SetConn("mysql", "root:@tcp(localhost:3306)/praise_auth?charset=utf8")
 	SetConn("cockroachDB", "postgresql://derek:123456@localhost:26257/auth?sslmode=disable")
+}
+
+//获取缓存
+func GetCache(str string) (interface{}, error) {
+	return cache.Get(str)
+}
+
+//设置缓存
+func SetCache(k, v interface{}) error {
+	return cache.Set(k, v)
 }
 
 /*
@@ -92,6 +122,8 @@ type Model interface {
 		     @return error 错误
 	*/
 	Exec(sql string, value ...interface{}) (int64, error)
+	GetSql() (string, []interface{})
+	SetDBConn(db, str string)
 }
 
 /*

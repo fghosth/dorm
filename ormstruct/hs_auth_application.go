@@ -70,7 +70,7 @@ func NewHsAuthApplication() HsAuthApplication {
 }
 
 //获得args字符串(除了update)
-func getArgsStr(num int) string {
+func getHsAuthApplicationArgsStr(num int) string {
 	var argsStr string
 	switch driverHsAuthApplication {
 	case "mysql":
@@ -110,7 +110,7 @@ func getArgsStr(num int) string {
 }
 
 //获得args字符串(update)
-func getArgsStrUpdate() string {
+func getHsAuthApplicationArgsStrUpdate() string {
 	var argsStr string
 	switch driverHsAuthApplication {
 	case "mysql":
@@ -178,7 +178,7 @@ func (hsAuthApplication *HsAuthApplication) FindByID(id int64) (interface{}, err
 	for i := 0; i < len(Beforefun.FindByID); i++ { //前置hooks
 		Beforefun.FindByID[i]()
 	}
-	argsStr := getArgsStr(1)
+	argsStr := getHsAuthApplicationArgsStr(1)
 	args := make([]interface{}, 1)
 	args[0] = id
 	sqlstr := "SELECT id,secret_key,app_key,name,ip,type,exp,created_at,updated_at,deleted_at,status_at FROM hs_auth_application WHERE id = " + argsStr
@@ -189,6 +189,7 @@ func (hsAuthApplication *HsAuthApplication) FindByID(id int64) (interface{}, err
 	if err != nil {
 		return hsAuthApplication, err
 	}
+
 	columns, _ := rows.Columns()
 	values := make([]interface{}, len(columns))
 	values[0] = &hsAuthApplication.Id
@@ -209,6 +210,7 @@ func (hsAuthApplication *HsAuthApplication) FindByID(id int64) (interface{}, err
 	for i := 0; i < len(Afterfun.FindByID); i++ { //后置hooks
 		Afterfun.FindByID[i]()
 	}
+
 	return hsAuthApplication, err
 }
 
@@ -216,7 +218,7 @@ func (hsAuthApplication HsAuthApplication) Add() (int64, error) {
 	for i := 0; i < len(Beforefun.Add); i++ { //前置hooks
 		Beforefun.Add[i]()
 	}
-	argsStr := getArgsStr(10)
+	argsStr := getHsAuthApplicationArgsStr(10)
 	sqlstr := "INSERT INTO hs_auth_application (secret_key,app_key,name,ip,type,exp,created_at,updated_at,deleted_at,status_at) VALUES (" + argsStr + ")"
 
 	stmtIns, err := dbconnHsAuthApplication.Prepare(sqlstr)
@@ -248,7 +250,7 @@ func (hsAuthApplication HsAuthApplication) AddBatch(obj []interface{}) error {
 	for i := 0; i < len(Beforefun.AddBatch); i++ { //前置hooks
 		Beforefun.AddBatch[i]()
 	}
-	argsStr := getArgsStr(10)
+	argsStr := getHsAuthApplicationArgsStr(10)
 	sqlstr := "INSERT INTO hs_auth_application (secret_key,app_key,name,ip,type,exp,created_at,updated_at,deleted_at,status_at) VALUES (" + argsStr + ")"
 	tx, err := dbconnHsAuthApplication.Begin()
 	Checkerr(err)
@@ -289,7 +291,7 @@ func (hsAuthApplication *HsAuthApplication) Update() (int64, error) {
 	for i := 0; i < len(Beforefun.Update); i++ { //前置hooks
 		Beforefun.Update[i]()
 	}
-	argsStr := getArgsStrUpdate()
+	argsStr := getHsAuthApplicationArgsStrUpdate()
 	sqlstr := "UPDATE hs_auth_application SET " + argsStr
 	stmtIns, err := dbconnHsAuthApplication.Prepare(sqlstr)
 	Checkerr(err)
@@ -320,7 +322,7 @@ func (hsAuthApplication HsAuthApplication) UpdateBatch(obj []interface{}) error 
 	for i := 0; i < len(Beforefun.UpdateBatch); i++ { //前置hooks
 		Beforefun.UpdateBatch[i]()
 	}
-	argsStr := getArgsStrUpdate()
+	argsStr := getHsAuthApplicationArgsStrUpdate()
 	sqlstr := "UPDATE hs_auth_application SET " + argsStr
 	tx, err := dbconnHsAuthApplication.Begin()
 	Checkerr(err)
@@ -360,7 +362,7 @@ func (hsAuthApplication HsAuthApplication) Delete() (int64, error) {
 	for i := 0; i < len(Beforefun.Delete); i++ { //前置hooks
 		Beforefun.Delete[i]()
 	}
-	argsStr := getArgsStr(1)
+	argsStr := getHsAuthApplicationArgsStr(1)
 	sqlstr := "DELETE FROM hs_auth_application WHERE id = " + argsStr
 	stmt, err := dbconnHsAuthApplication.Prepare(sqlstr)
 	Checkerr(err)
@@ -382,7 +384,7 @@ func (hsAuthApplication HsAuthApplication) DeleteBatch(obj []interface{}) error 
 	for i := 0; i < len(Beforefun.DeleteBatch); i++ { //前置hooks
 		Beforefun.DeleteBatch[i]()
 	}
-	argsStr := getArgsStr(1)
+	argsStr := getHsAuthApplicationArgsStr(1)
 	sqlstr := "DELETE FROM hs_auth_application WHERE id = " + argsStr
 	tx, err := dbconnHsAuthApplication.Begin()
 	Checkerr(err)
@@ -414,12 +416,10 @@ func (hsAuthApplication HsAuthApplication) Exec(sql string, value ...interface{}
 
 	stmt, err := dbconnHsAuthApplication.Prepare(sql)
 	Checkerr(err)
-
 	sqlHsAuthApplication = sql
 	argsHsAuthApplication = value
 	defer stmt.Close()
 	result, err := stmt.Exec(value...)
-
 	Checkerr(err)
 	for i := 0; i < len(Afterfun.Exec); i++ { //后置hooks
 		Afterfun.Exec[i]()

@@ -1,4 +1,4 @@
-package tmmp
+package tmp
 
 import (
 	_ "github.com/go-sql-driver/mysql"
