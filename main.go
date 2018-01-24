@@ -109,11 +109,11 @@ func main() {
 			Aliases: []string{"cm"},
 			Usage:   "根据struct生成model。包括基础的增删改查，并映射到struct。支持mysql,mariadb,postgresql,cockroach",
 			Flags: []cli.Flag{
-				// cli.StringFlag{
-				// 	Name:  "database, d",
-				// 	Value: "mysql",
-				// 	Usage: "需支持的数据库脚本.可选值：mysql,mariadb,postgresql,cockroach",
-				// },
+				cli.StringFlag{
+					Name:  "location, l",
+					Value: "",
+					Usage: "当前包的名字如 【jvole.com/createProject/ormstruct/base】 就是『jvole.com/createProject/』",
+				},
 				cli.StringFlag{
 					Name:  "file, f",
 					Value: "",

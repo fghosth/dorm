@@ -11,8 +11,9 @@ import (
 type dorm struct{}
 
 var (
-	ut = new(util.Dstring)
-	sl = new(lexer.StructLexer)
+	ut       = new(util.Dstring)
+	sl       = new(lexer.StructLexer)
+	baseName = "base"
 )
 
 func CreateDorm(pkname, structStr string) string {
@@ -30,11 +31,46 @@ func CreateDorm(pkname, structStr string) string {
 	delete := CreateDelete(structStr) + "\n"
 	deletebatch := CreateDeleteBatch(structStr) + "\n"
 	exec := CreateExec(structStr) + "\n"
+	softDel := CreateSoftDeleteFun(structStr) + "\n"
 
-	filestring = header + field + structStr + "\n" + function + getArgsStr + selec + findByID + add + addbatch + update + updatebatch + delete + deletebatch + exec
+	filestring = header + field + structStr + "\n" + function + getArgsStr + selec + findByID + add + addbatch + update + updatebatch + softDel + delete + deletebatch + exec
 	return filestring
 }
 
+/*
+location当前包的名字如"jvole.com/createProject/ormstruct/base" 就是『jvole.com/createProject/』
+pkname 包名 如 ormstruct
+*/
+func CreateDAO(location, pkname, structStr string) string {
+	obj := sl.StructName(structStr)
+	field := sl.FieldName(structStr)
+	objvar, err := ut.FUPer(obj)
+	fields := make([]string, len(field))
+	for i, v := range field {
+		fields[i] = objvar + "." + v["field"] + " = dao." + v["field"]
+	}
+	ctx := map[string]interface{}{
+		"obj":         obj,
+		"objvar":      objvar,
+		"pkname":      pkname,
+		"field":       fields,
+		"modelImport": ut.CheckAndAdd(location, "/") + ut.CheckAndAdd(pkname, "/") + baseName,
+	}
+	str, err := raymond.Render(DAO_TPL, ctx)
+	ut.Checkerr(err)
+	return str
+}
+func CreateSoftDeleteFun(structStr string) string {
+	obj := sl.StructName(structStr)
+	objvar, err := ut.FUPer(obj)
+	ctx := map[string]interface{}{
+		"obj":    obj,
+		"objvar": objvar,
+	}
+	str, err := raymond.Render(SDEL_TPL, ctx)
+	ut.Checkerr(err)
+	return str
+}
 func CreateGetArgsStrFun(structStr string) string {
 	obj := sl.StructName(structStr)
 	field := sl.FieldName(structStr)
@@ -55,8 +91,8 @@ func CreateGetArgsStrFun(structStr string) string {
 		}
 
 	}
-	fields = fields + " WHERE " + sqlField + "=?"
-	pqfields = pqfields + " WHERE " + sqlField + "=$" + strconv.Itoa(len(field))
+	fields = fields + " WHERE \"  + SDELFLAG + \"=0 and " + sqlField + "=?"
+	pqfields = pqfields + " WHERE \"  + SDELFLAG + \"=0 and " + sqlField + "=$" + strconv.Itoa(len(field))
 	ctx := map[string]interface{}{
 		"obj":              obj,
 		"mysqlField":       fields,
@@ -190,7 +226,9 @@ func CreateUpdateBatch(structStr string) string {
 	values := make([]string, len(field))
 	for i, v := range field {
 		if i > 0 { //去除id
-			values[i-1] = "args[" + strconv.Itoa(i-1) + "]=v." + v["field"]
+
+			values[i-1] = "args[" + strconv.Itoa(i-1) + "] = v." + v["field"]
+
 			if fields == "" {
 				fields = ut.CalToUnder(v["field"]) + "=?"
 			} else {
@@ -229,7 +267,9 @@ func CreateUpdate(structStr string) string {
 	values := make([]string, len(field))
 	for i, v := range field {
 		if i > 0 { //去除id
-			values[i-1] = "args[" + strconv.Itoa(i-1) + "]=&" + objvar + "." + v["field"]
+
+			values[i-1] = "args[" + strconv.Itoa(i-1) + "] = " + objvar + "." + v["field"]
+
 			if fields == "" {
 				fields = ut.CalToUnder(v["field"]) + "=?"
 			} else {
@@ -343,7 +383,9 @@ func CreateFindByID(structStr string) string {
 
 	values := make([]string, len(field))
 	for i, v := range field {
-		values[i] = "values[" + strconv.Itoa(i) + "]=&" + objvar + "." + v["field"]
+
+		values[i] = "values[" + strconv.Itoa(i) + "] = &" + objvar + "." + v["field"]
+
 		if fields == "" {
 			fields = ut.CalToUnder(v["field"])
 		} else {
@@ -373,8 +415,11 @@ func CreateSelect(structStr string) string {
 	field := sl.FieldName(structStr)
 	fields := ""
 	values := make([]string, len(field))
+
 	for i, v := range field {
-		values[i] = "values[" + strconv.Itoa(i) + "]=&" + objvar + "." + v["field"]
+
+		values[i] = "values[" + strconv.Itoa(i) + "] = &" + objvar + "." + v["field"]
+
 		if fields == "" {
 			fields = ut.CalToUnder(v["field"])
 		} else {

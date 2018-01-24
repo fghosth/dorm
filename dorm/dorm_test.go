@@ -10,7 +10,7 @@ import (
 )
 
 var ut = new(util.Dstring)
-var file = "../ormstruct/hs_auth_application.go"
+var file = "../genstruct/hs_auth_application.go"
 
 func init() {
 
@@ -18,7 +18,7 @@ func init() {
 
 // func TestCreateModel(t *testing.T) {
 //
-// 	Str := dorm.CreateModel("ormstruct")
+// 	Str := dorm.CreateModel("base")
 // 	fmt.Println(Str)
 // }
 
@@ -27,10 +27,30 @@ func TestCreateDorm(t *testing.T) {
 	fileStr := sl.GetStructFile(file)
 	arrStruct := sl.StructStr(fileStr)
 	for _, v := range arrStruct {
-		Str := dorm.CreateDorm("ormstruct", v)
+		Str := dorm.CreateDorm("base", v)
 		fmt.Println(Str)
 	}
 }
+
+// func TestCreateDAO(t *testing.T) {
+// 	sl := new(lexer.StructLexer)
+// 	fileStr := sl.GetStructFile(file)
+// 	arrStruct := sl.StructStr(fileStr)
+// 	for _, v := range arrStruct {
+// 		Str := dorm.CreateDAO("jvole.com/createProject/", "ormstruct", v)
+// 		fmt.Println(Str)
+// 	}
+// }
+
+// func TestCreateSofeDelFun(t *testing.T) {
+// 	sl := new(lexer.StructLexer)
+// 	fileStr := sl.GetStructFile(file)
+// 	arrStruct := sl.StructStr(fileStr)
+// 	for _, v := range arrStruct {
+// 		Str := dorm.CreateSoftDeleteFun(v)
+// 		fmt.Println(Str)
+// 	}
+// }
 
 // func TestCreateGetArgsStrFun(t *testing.T) {
 // 	sl := new(lexer.StructLexer)

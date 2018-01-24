@@ -15,8 +15,8 @@ import (
 var (
 	ERRNOFILE   = errors.New("未指定sql文件：-f ./user.sql")
 	ERRNOSQL    = errors.New("未指定数据库类型:-d mysql(cockroach)")
-	structPath  = "./ormstruct/"
-	packageName = "ormstruct"
+	structPath  = "./genstruct/"
+	packageName = "genstruct"
 )
 
 /*sadfa

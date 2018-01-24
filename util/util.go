@@ -8,12 +8,48 @@ import (
 	"fmt"
 	"os"
 	"regexp"
+	"strconv"
 	"strings"
 )
 
 type Dstring struct {
 }
 
+//对象数组转化为义某分隔符合并的字符串
+func (ds *Dstring) JoinInterface(obj []interface{}, seq string) string {
+	var str, tmp string
+	for i := 0; i < len(obj); i++ {
+		b, ok := obj[i].(int)
+		if ok {
+			tmp = strconv.Itoa(b)
+		}
+		c, ok := obj[i].(string)
+		if ok {
+			tmp = c
+		}
+		if str == "" {
+			str = tmp
+		} else {
+			str = str + seq + tmp
+		}
+	}
+	return str
+}
+
+//查看字符串最后一个字符是不是某个字符，如果不是则加上
+func (ds *Dstring) CheckAndAdd(str, seq string) string {
+	var s string
+	pos := strings.LastIndex(str, seq)
+	length := len(str)
+	if length != pos+1 {
+		s = str + seq
+	} else {
+		s = str
+	}
+	return s
+}
+
+//md5加密
 func (ds *Dstring) Md5Str(str string) string {
 	md5Ctx := md5.New()
 	md5Ctx.Write([]byte(str))

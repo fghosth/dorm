@@ -12,10 +12,28 @@ func ({{{objvar}}} {{{obj}}}) Select(sql string, limit, offset int, value ...int
 	}
 	ar := make([]interface{}, limit) //0为可变数组长度
 	// ar[0].(*HsAuthRecords)
-	sqlstr := "select {{{fields}}} from {{{tableName}}} " + sql + " limit " + strconv.Itoa(limit) + " offset " + strconv.Itoa(offset)
+	sqlstr := "select {{{fields}}} from {{{tableName}}} where "+ SDELFLAG + "=0 " + sql + " limit " + strconv.Itoa(limit) + " offset " + strconv.Itoa(offset)
 
 	sql{{{obj}}} = sqlstr
 	args{{{obj}}} = value
+
+	//设置缓存
+	var ckey string
+	if CacheUsed() {
+		ckey = UT.Md5Str(sql{{{obj}}} + UT.JoinInterface(args{{{obj}}}, "-"))
+		cv, err := GetCache(ckey)
+		Checkerr(err)
+		if err == nil { //命中缓存
+			for i := 0; i < len(Afterfun.Select); i++ { //后置hooks
+				Afterfun.Select[i]()
+			}
+			res, ok := cv.([]interface{})
+			if ok {
+				return res, nil
+			}
+		}
+	}
+
 	rows, err := dbconn{{{obj}}}.Query(sqlstr, value...)
 	defer rows.Close()
 	if err != nil {
@@ -32,11 +50,16 @@ func ({{{objvar}}} {{{obj}}}) Select(sql string, limit, offset int, value ...int
 			break
 		}
 		err := rows.Scan(values...)
-		Checkerr(err)
+		if err != nil {
+			return ar, err
+		}
 		ar[num] = {{{objvar}}}
 		num++
 	}
-
+	//设置缓存
+	if CacheUsed() {
+		err = SetCache(ckey, ar)
+	}
 	for i := 0; i < len(Afterfun.Select); i++ { //后置hooks
 		Afterfun.Select[i]()
 	}
@@ -51,9 +74,26 @@ func ({{{objvar}}} *{{{obj}}}) FindByID(id int64) (interface{}, error) {
 	argsStr := get{{{obj}}}ArgsStr(1)
 	args := make([]interface{}, 1)
 	args[0] = id
-	sqlstr := "SELECT {{{fields}}} FROM {{{tableName}}} WHERE {{{sqlField}}} = " + argsStr
+	sqlstr := "SELECT {{{fields}}} FROM {{{tableName}}} WHERE " + SDELFLAG + "=0 and  {{{sqlField}}} = " + argsStr
 	sql{{{obj}}} = sqlstr
 	args{{{obj}}} = args
+
+	//设置缓存
+	var ckey string
+	if CacheUsed() {
+		ckey = UT.Md5Str(sql{{{obj}}} + UT.JoinInterface(args{{{obj}}}, "-"))
+		cv, err := GetCache(ckey)
+		if err == nil { //命中缓存
+			for i := 0; i < len(Afterfun.FindByID); i++ { //后置hooks
+				Afterfun.FindByID[i]()
+			}
+			res, ok := cv.([]interface{})
+			if ok {
+				return res, nil
+			}
+		}
+	}
+
 	rows, err := dbconn{{{obj}}}.Query(sqlstr, args...)
 	defer rows.Close()
 	if err != nil {
@@ -67,6 +107,11 @@ func ({{{objvar}}} *{{{obj}}}) FindByID(id int64) (interface{}, error) {
 	if rows.Next() {
 		err = rows.Scan(values...)
 		Checkerr(err)
+	}
+
+	//设置缓存
+	if CacheUsed() {
+		err = SetCache(ckey, {{{objvar}}})
 	}
 	for i := 0; i < len(Afterfun.FindByID); i++ { //后置hooks
 		Afterfun.FindByID[i]()
@@ -84,7 +129,9 @@ func ({{{objvar}}} {{{obj}}}) Add() (int64, error) {
 	sqlstr := "INSERT INTO {{{tableName}}} ({{{fields}}}) VALUES (" + argsStr + ")"
 
 	stmtIns, err := dbconn{{{obj}}}.Prepare(sqlstr)
-	Checkerr(err)
+	if err != nil {
+		return 0, err
+	}
 	defer stmtIns.Close()
 	args := make([]interface{}, {{{len}}})
 	{{#each field}}
@@ -93,7 +140,9 @@ func ({{{objvar}}} {{{obj}}}) Add() (int64, error) {
 	sql{{{obj}}} = sqlstr
 	args{{{obj}}} = args
 	result, err := stmtIns.Exec(args...)
-	Checkerr(err)
+	if err != nil {
+		return 0, err
+	}
 	for i := 0; i < len(Afterfun.Add); i++ { //后置hooks
 		Afterfun.Add[i]()
 	}
@@ -108,10 +157,14 @@ func ({{{objvar}}} {{{obj}}}) AddBatch(obj []interface{}) error {
 	argsStr := get{{{obj}}}ArgsStr({{{len}}})
 	sqlstr := "INSERT INTO {{{tableName}}} ({{{fields}}}) VALUES (" + argsStr + ")"
 	tx, err := dbconn{{{obj}}}.Begin()
-	Checkerr(err)
+	if err != nil {
+		return  err
+	}
 	stmt, err := tx.Prepare(sqlstr)
 	defer stmt.Close()
-	Checkerr(err)
+	if err != nil {
+		return  err
+	}
 	args := make([]interface{}, {{{len}}})
 
 	sql{{{obj}}} = sqlstr
@@ -123,10 +176,14 @@ func ({{{objvar}}} {{{obj}}}) AddBatch(obj []interface{}) error {
 	 		{{{this}}}
 		{{/each}}
 		_, err = stmt.Exec(args...)
-		Checkerr(err)
+		if err != nil {
+			return  err
+		}
 	}
 	err = tx.Commit()
-	Checkerr(err)
+	if err != nil {
+		return  err
+	}
 	for i := 0; i < len(Afterfun.AddBatch); i++ { //后置hooks
 		Afterfun.AddBatch[i]()
 	}
@@ -142,7 +199,9 @@ func ({{{objvar}}} *{{{obj}}}) Update() (int64, error) {
 	argsStr := get{{{obj}}}ArgsStrUpdate()
 	sqlstr := "UPDATE {{{tableName}}} SET " + argsStr
 	stmtIns, err := dbconn{{{obj}}}.Prepare(sqlstr)
-	Checkerr(err)
+	if err != nil {
+		return 0, err
+	}
 	defer stmtIns.Close()
 	args := make([]interface{}, {{{len}}})
 	{{#each field}}
@@ -151,7 +210,9 @@ func ({{{objvar}}} *{{{obj}}}) Update() (int64, error) {
 	sql{{{obj}}} = sqlstr
 	args{{{obj}}} = args
 	result, err := stmtIns.Exec(args...)
-	Checkerr(err)
+	if err != nil {
+		return 0, err
+	}
 	for i := 0; i < len(Afterfun.Update); i++ { //后置hooks
 		Afterfun.Update[i]()
 	}
@@ -166,10 +227,14 @@ func ({{{objvar}}} {{{obj}}}) UpdateBatch(obj []interface{}) error {
 	argsStr := get{{{obj}}}ArgsStrUpdate()
 	sqlstr := "UPDATE {{{tableName}}} SET " + argsStr
 	tx, err := dbconn{{{obj}}}.Begin()
-	Checkerr(err)
+	if err != nil {
+		return err
+	}
 	stmt, err := tx.Prepare(sqlstr)
 	defer stmt.Close()
-	Checkerr(err)
+	if err != nil {
+		return err
+	}
 	args := make([]interface{}, {{{len}}})
 
 	for _, value := range obj {
@@ -178,12 +243,16 @@ func ({{{objvar}}} {{{obj}}}) UpdateBatch(obj []interface{}) error {
 	 		{{{this}}}
 		{{/each}}
 		_, err = stmt.Exec(args...)
-		Checkerr(err)
+		if err != nil {
+			return err
+		}
 	}
 	sql{{{obj}}} = sqlstr
 	args{{{obj}}} = args
 	err = tx.Commit()
-	Checkerr(err)
+	if err != nil {
+		return err
+	}
 	for i := 0; i < len(Afterfun.UpdateBatch); i++ { //后置hooks
 		Afterfun.UpdateBatch[i]()
 	}
@@ -199,7 +268,9 @@ func ({{{objvar}}} {{{obj}}}) Delete() (int64, error) {
 	argsStr := get{{{obj}}}ArgsStr(1)
   sqlstr := "DELETE FROM {{{tableName}}} WHERE {{{sqlField}}} = " + argsStr
 	stmt, err := dbconn{{{obj}}}.Prepare(sqlstr)
-	Checkerr(err)
+	if err != nil {
+		return 0, err
+	}
 	args := make([]interface{}, 1)
 	args[0] = {{{objvar}}}.{{{structField}}}
 	sql{{{obj}}} = sqlstr
@@ -222,22 +293,30 @@ func ({{{objvar}}} {{{obj}}}) DeleteBatch(obj []interface{}) error {
 	argsStr := get{{{obj}}}ArgsStr(1)
 	sqlstr := "DELETE FROM {{{tableName}}} WHERE {{{sqlField}}} = " + argsStr
 	tx, err := dbconn{{{obj}}}.Begin()
-	Checkerr(err)
+	if err != nil {
+		return err
+	}
 	stmt, err := tx.Prepare(sqlstr)
 	defer stmt.Close()
-	Checkerr(err)
+	if err != nil {
+		return err
+	}
 	args := make([]interface{}, 1)
 
 	for _, value := range obj {
 		v := value.({{{obj}}})
 		args[0] = v.{{{structField}}}
 		_, err = stmt.Exec(args...)
-		Checkerr(err)
+		if err != nil {
+			return err
+		}
 	}
 	sql{{{obj}}} = sqlstr
 	args{{{obj}}} = args
 	err = tx.Commit()
-	Checkerr(err)
+	if err != nil {
+		return err
+	}
 	for i := 0; i < len(Afterfun.DeleteBatch); i++ { //后置hooks
 		Afterfun.DeleteBatch[i]()
 	}
@@ -251,14 +330,18 @@ func ({{{objvar}}} {{{obj}}}) Exec(sql string, value ...interface{}) (int64, err
 	}
 
 	stmt, err := dbconn{{{obj}}}.Prepare(sql)
-	Checkerr(err)
+	if err != nil {
+		return 0, err
+	}
 
 	sql{{{obj}}} = sql
 	args{{{obj}}} = value
 	defer stmt.Close()
 	result, err := stmt.Exec(value...)
 
-	Checkerr(err)
+	if err != nil {
+		return 0, err
+	}
 	for i := 0; i < len(Afterfun.Exec); i++ { //后置hooks
 		Afterfun.Exec[i]()
 	}
@@ -323,6 +406,21 @@ func ({{{objvar}}} {{{obj}}}) Exec(sql string, value ...interface{}) (int64, err
 	}
 
 `
+	SDEL_TPL = `
+func ({{{objvar}}} {{{obj}}}) SDelete() (int64, error) {
+	{{{objvar}}}.StatusAt = 1
+	return {{{objvar}}}.Update()
+}
+
+func ({{{objvar}}} {{{obj}}}) SDeleteBatch(obj []interface{}) error {
+	for i := 0; i < len(obj); i++ {
+		o := obj[i].({{{obj}}})
+		o.StatusAt = 1
+		obj[i] = o
+	}
+	return {{{objvar}}}.UpdateBatch(obj)
+}
+`
 	Field_TPL = `
 var (
 	sql{{{obj}}} string
@@ -381,7 +479,162 @@ func New{{{obj}}}() {{{obj}}} {
 	return {{{obj}}}{}
 }
 `
+	DAO_TPL = `
+package {{{pkname}}}
 
+import (
+ "{{{modelImport}}}"
+)
+
+type {{{obj}}}Dao struct {
+	model base.Model
+	base.{{{obj}}}
+}
+/*
+			 根据条件查找结果集
+			 @parm sql 除去select where 1=1  xxx,xxx from tablename 之后的东西 如果要加where先加『and』eg【and username = "derek"】
+			 @parm value sql中?值 可以为空
+			 @parm limit 显示数量
+			 @parm offset 数据位置0开始
+			 @return struct 集合
+			 @return error 错误
+*/
+func (dao {{{obj}}}Dao) Select(sql string, limit, offset int, value ...interface{}) ([]interface{}, error) {
+	return dao.model.Select(sql, limit, offset, value...)
+}
+/*
+			 根据主键查找
+			 @parm id 主键
+			 @return struct
+			 @return error 错误
+*/
+func (dao *{{{obj}}}Dao) FindByID(id int64) (interface{}, error) {
+	res, err := dao.model.FindByID(id)
+	re := res.(*base.{{{obj}}})
+	dao.{{{obj}}} = *re
+	return res, err
+}
+/*
+			 根据自身struct内容添加
+			 @parm
+			 @return 返回主键id
+			 @return error 错误
+*/
+func (dao {{{obj}}}Dao) Add() (int64, error) {
+	b := dao.getObjWithValue(dao)
+	dao.model = &b
+	return dao.model.Add()
+}
+/*
+			 批量添加
+			 @parm struct数组
+			 @return error 错误
+*/
+func (dao {{{obj}}}Dao) AddBatch(obj []interface{}) error {
+	return dao.model.AddBatch(obj)
+}
+/*
+			 根据自身struct更新
+			 @parm
+			 @return int64 修改记录的id
+			 @return error 错误
+*/
+func (dao {{{obj}}}Dao) Update() (int64, error) {
+	b := dao.getObjWithValue(dao)
+	dao.model = &b
+	return dao.model.Update()
+}
+/*
+			 批量更新
+			 @parm struct数组
+			 @return error 错误
+*/
+func (dao {{{obj}}}Dao) UpdateBatch(obj []interface{}) error {
+	return dao.model.UpdateBatch(obj)
+}
+/*
+			 根据自身struct删除
+			 @parm
+			 @return int64 影响行数
+			 @return error 错误
+*/
+func (dao {{{obj}}}Dao) Delete() (int64, error) {
+	b := dao.getObjWithValue(dao)
+	dao.model = &b
+	return dao.model.Delete()
+}
+/*
+			 批量删除
+			 @parm struct struct数组
+			 @return error 错误
+*/
+func (dao {{{obj}}}Dao) DeleteBatch(obj []interface{}) error {
+	return dao.model.DeleteBatch(obj)
+}
+/*
+ 根据自身struct软删除
+ @parm
+ @return int64 影响行数
+ @return error 错误
+*/
+func (dao {{{obj}}}Dao) SDelete() (int64, error) {
+	b := dao.getObjWithValue(dao)
+	dao.model = &b
+	return dao.model.SDelete()
+}
+
+/*
+ 批量软删除
+ @parm struct struct数组
+ @return error 错误
+*/
+
+func (dao {{{obj}}}Dao) SDeleteBatch(obj []interface{}) error {
+	return dao.model.SDeleteBatch(obj)
+}
+
+/*
+			 执行sql语句 非查询的语句
+			 @parm sql sql语句，valuesql语句中?的部分，可以为空
+			 @return int64 影响的行数
+			 @return error 错误
+*/
+func (dao {{{obj}}}Dao) Exec(sql string, value ...interface{}) (int64, error) {
+	return dao.model.Exec(sql, value...)
+}
+/*
+			 获取最后执行的sql语句 和参数
+			 @return string sql语句和参数
+*/
+func (dao {{{obj}}}Dao) GetSql() (string, []interface{}) {
+	return dao.model.GetSql()
+}
+/*
+			 设置当前对象的链接
+			 @db 数据库默认值mysql 支持mysql，mariadb，cockroachDB
+			 @str 数据库连接 『postgresql://derek:123456@localhost:26257/auth?sslmode=disable』 【root:@tcp(localhost:3306)/praise_auth?charset=utf8】
+			 @return int64 影响的行数
+			 @return error 错误
+*/
+func (dao {{{obj}}}Dao) SetDBConn(db, str string) {
+	dao.model.SetDBConn(db, str)
+}
+
+//获取有值的对象
+func (daoo {{{obj}}}Dao) getObjWithValue(dao {{{obj}}}Dao) base.{{{obj}}} {
+	{{{objvar}}} := base.New{{{obj}}}()
+	{{#each field}}
+	{{{this}}}
+	{{/each}}
+	return {{{objvar}}}
+}
+
+func New{{{obj}}}Dao() {{{obj}}}Dao {
+	ap := base.New{{{obj}}}()
+	aa := base.{{{obj}}}{}
+	return {{{obj}}}Dao{&ap, aa}
+}
+`
 	MODEL_TPL = `
 package {{{pkname}}}
 
@@ -389,23 +642,99 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
+	"time"
+	"jvole.com/algo-go/gcache"
+	"jvole.com/createProject/util"
 )
 
 const (
 	LIMIT   = 500  //默认查询条数限制
 	OFFSET  = 0    //默认位置
 	MAXROWS = 1000 //最多查出多少条,-1为不限制
+	SDELFLAG = "status_at" //数据库必出有这个字段才有用，软删除字段 0为未删除，1为删除
+	UNDEL    = 0           //为删除
+	DELED    = 1           //删除
 )
 
 
 var (
-	DB *sql.DB //数据库连接
+	DB        *sql.DB //数据库连接
 	Beforefun Before
-	Afterfun After
-	Driver string
+	Afterfun  After
+	Driver    string
+	cacheLen  = 3000  //缓存条数
+	cacheTime = 30   //缓存时间 秒
+	useCache  = true  //是否使用缓存
+	cacheType = "ARC" //缓存类型:LRU,LFU,ARC
+	cache     gcache.Cache
+	UT        = util.Dstring{} //工具类
 )
 
+//设置缓存类型
+func SetCacheType(ctype string, clen int) {
+	switch ctype {
+	case "LRU":
+		cache = gcache.New(clen).LRU().Build()
+	case "LFU":
+		cache = gcache.New(clen).LFU().Build()
+	case "ARC":
+		cache = gcache.New(clen).ARC().Build()
+	}
+}
+
+//设置缓存时间 秒 默认30
+func SetCacheTime(t int) {
+	cacheTime = t
+}
+
+//获取缓存时间
+func GetCacheTime() int {
+	return cacheTime
+}
+
+//设置缓存容量 个数默认2000
+func SetCacheLen(l int) {
+	cacheLen = l
+}
+
+//获取缓存容量
+func GetCacheLen() int {
+	return cacheLen
+}
+
+//获取已缓存的数量
+func GetCacheUsedLen() int {
+	return cache.Len()
+}
+
+
+//设置是否开启缓存true为开启，false关闭
+func UseCache(uc bool) {
+	useCache = uc
+}
+
+//获取缓存是否开启
+func CacheUsed() bool {
+	return useCache
+}
+
+//获取缓存命中率
+func GetCacheRate() float64 {
+	return cache.HitRate()
+}
+
+//设置缓存
+func SetCache(k, v interface{}) error {
+	return cache.SetWithExpire(k, v, time.Second*time.Duration(cacheTime))
+}
+
+//获取缓存
+func GetCache(k interface{}) (interface{}, error) {
+	return cache.Get(k)
+}
+
 func init() {
+	SetCacheType(cacheType, cacheLen)
 	// SetConn("mysql", "root:@tcp(localhost:3306)/praise_auth?charset=utf8")
 	SetConn("cockroachDB", "postgresql://derek:123456@localhost:26257/auth?sslmode=disable")
 }
@@ -416,7 +745,7 @@ func init() {
 type Model interface {
 	/*
 			   根据条件查找结果集
-			   @parm sql 除去select xxx,xxx from tablename 之后的东西
+			   @parm sql 除去select where 1=1  xxx,xxx from tablename 之后的东西 如果要加where先加『and』eg【and username = "derek"】
 			   @parm value sql中?值 可以为空
 			   @parm limit 显示数量
 			   @parm offset 数据位置0开始
@@ -465,6 +794,20 @@ type Model interface {
 	*/
 	Delete() (int64, error)
 	/*
+			   根据自身struct软删除
+			   @parm
+		     @return int64 影响行数
+		     @return error 错误
+	*/
+	SDelete() (int64, error)
+	/*
+			   批量软删除
+			   @parm struct struct数组
+		     @return error 错误
+	*/
+
+	SDeleteBatch(obj []interface{}) error
+	/*
 			   批量删除
 			   @parm struct struct数组
 		     @return error 错误
@@ -478,6 +821,19 @@ type Model interface {
 		     @return error 错误
 	*/
 	Exec(sql string, value ...interface{}) (int64, error)
+	/*
+			   获取最后执行的sql语句 和参数
+		     @return string sql语句和参数
+	*/
+	GetSql() (string, []interface{})
+	/*
+			   设置当前对象的链接
+			   @db 数据库默认值mysql 支持mysql，mariadb，cockroachDB
+			   @str 数据库连接 『postgresql://derek:123456@localhost:26257/auth?sslmode=disable』 【root:@tcp(localhost:3306)/praise_auth?charset=utf8】
+		     @return int64 影响的行数
+		     @return error 错误
+	*/
+	SetDBConn(db, str string)
 }
 
 /*
