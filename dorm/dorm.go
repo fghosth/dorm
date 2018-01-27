@@ -125,7 +125,7 @@ func CreateField(structStr string) string {
 }
 
 func CreateHeader(pkname string) string {
-	var imp = [...]string{`"database/sql"`, `"log"`, `"strconv"`}
+	var imp = [...]string{`"database/sql"`, `"log"`, `"strconv"`, `"fmt"`, `"sync"`, `"time"`}
 
 	ctx := map[string]interface{}{
 		"field":  imp,

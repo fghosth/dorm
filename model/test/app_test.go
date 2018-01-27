@@ -2,6 +2,7 @@ package model_test
 
 import (
 	"fmt"
+	"math/rand"
 	"strconv"
 	"testing"
 	"time"
@@ -13,9 +14,12 @@ import (
 )
 
 var ut *util.Dstring
-var hsAuthApplication = model.NewHsAuthApplicationDao()
+var hsAuthApplication model.HsAuthApplicationDao
 
 func init() {
+	base.UseAddCache = true
+	base.AddCacheExp = 100
+	hsAuthApplication = model.NewHsAuthApplicationDao()
 	ut = new(util.Dstring)
 }
 func TestAASDEL(t *testing.T) {
@@ -217,18 +221,27 @@ func TestAAAdd(t *testing.T) {
 	base.AddBeforeFun(func() { fmt.Println("Add==============before") }, "Add")
 	base.AddAfterFun(func() { fmt.Println("Add==============after") }, "Add")
 	base.AddAfterFun(func() { fmt.Println("Add=======dd=======after") }, "Add")
-	hsAuthApplication.SecretKey = "w3erqeer332"
-	hsAuthApplication.AppKey = "41323fsedfasdfw1"
-	hsAuthApplication.Name = "ssa3df2e3423e1"
-	hsAuthApplication.Ip = "192.143.11.112"
-	hsAuthApplication.Exp = 100
-	hsAuthApplication.Type = 1
-	hsAuthApplication.CreatedAt = "2001-01-14"
-	hsAuthApplication.UpdatedAt = "2001-01-14"
-	hsAuthApplication.DeletedAt = "2001-01-14"
-	hsAuthApplication.StatusAt = 1
-	result, err := hsAuthApplication.Add()
-	ut.Checkerr(err)
-	pp.Println(result)
+	base.AddCacheLen = 5
+	r := rand.New(rand.NewSource(time.Now().UnixNano()))
+	for i := 0; i < 100; i++ {
+		hsAuthApplication.SecretKey = strconv.Itoa(r.Intn(10000000))
+		hsAuthApplication.AppKey = strconv.Itoa(r.Intn(10000000))
+		hsAuthApplication.Name = "ssdf2dde3423e1"
+		hsAuthApplication.Ip = "192.143.11.112"
+		hsAuthApplication.Exp = 100
+		hsAuthApplication.Type = 1
+		hsAuthApplication.CreatedAt = "2001-01-14"
+		hsAuthApplication.UpdatedAt = "2001-01-14"
+		hsAuthApplication.DeletedAt = "2001-01-14"
+		hsAuthApplication.StatusAt = 1
+		_, err := hsAuthApplication.Add()
+		time.Sleep(time.Second * 1)
+		ut.Checkerr(err)
+	}
+	time.Sleep(time.Second * 100)
+	// ch := make(chan int)
+	// <-ch // 阻塞main goroutine, 信道c被锁
+	// time.Sleep(time.Second * 20)
+	// pp.Println(result)
 	pp.Println(hsAuthApplication.GetSql())
 }

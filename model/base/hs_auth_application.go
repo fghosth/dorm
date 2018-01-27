@@ -4,6 +4,9 @@ import (
  "database/sql"
  "log"
  "strconv"
+ "fmt"
+ "sync"
+ "time"
 _ "github.com/go-sql-driver/mysql"
 _ "github.com/lib/pq"
 )
@@ -14,6 +17,9 @@ var (
 	argsHsAuthApplication []interface{}
 	dbconnHsAuthApplication *sql.DB
 	driverHsAuthApplication string
+	addCacheHsAuthApplication []interface{} //添加缓存数组
+	countHsAuthApplication int              //计数 秒
+	addCacheFlagHsAuthApplication      = false //缓存进程是否启动
 )
 
 type HsAuthApplication struct{
@@ -29,6 +35,34 @@ type HsAuthApplication struct{
  		DeletedAt string  `dormCol:"deleted_at" dormMysqlType:"timestamp" dorm:"DEFAULT NULL"`
  		StatusAt int8  `dormCol:"status_at" dormMysqlType:"tinyint(4)" dorm:"NOT NULL;DEFAULT '1'"`
    }
+
+	//检查增加缓存
+	func (hsAuthApplication HsAuthApplication) checkAddCache() {
+		for range time.Tick(1 * time.Second) {
+			if len(addCacheHsAuthApplication) >= AddCacheLen || countHsAuthApplication >= AddCacheExp {
+				err := hsAuthApplication.AddBatch(addCacheHsAuthApplication)
+				if err != nil {
+					fmt.Println(err)
+				}
+				countHsAuthApplication = 0
+				addCacheHsAuthApplication = make([]interface{}, 0)
+			}
+			l := new(sync.RWMutex)
+			l.Lock()
+			countHsAuthApplication++
+			l.Unlock()
+		}
+	}
+
+
+
+	//开始添加缓存进程
+	func (hsAuthApplication HsAuthApplication) StartAddCache()  {
+		if UseAddCache {
+			addCacheHsAuthApplication = make([]interface{}, 0)
+			go hsAuthApplication.checkAddCache()
+		}
+	}
 
 //返回执行语句后sql，调试用
 func (hsAuthApplication HsAuthApplication) GetSql() (string, []interface{}) {
@@ -66,7 +100,9 @@ func (hsAuthApplication HsAuthApplication) SetDBConn(db, str string) {
 func NewHsAuthApplication() HsAuthApplication {
 	dbconnHsAuthApplication = DB
 	driverHsAuthApplication = Driver
-	return HsAuthApplication{}
+	hsAuthApplication := HsAuthApplication{}
+
+	return hsAuthApplication
 }
 
 
@@ -288,14 +324,33 @@ func (hsAuthApplication HsAuthApplication) Add() (int64, error) {
 		
 	sqlHsAuthApplication = sqlstr
 	argsHsAuthApplication = args
-	result, err := stmtIns.Exec(args...)
-	if err != nil {
+
+
+	if UseAddCache {
+		if !addCacheFlagHsAuthApplication  {
+			hsAuthApplication.StartAddCache()
+			addCacheFlagHsAuthApplication  = true
+		}
+		l := new(sync.RWMutex)
+		l.Lock()
+		addCacheHsAuthApplication = append(addCacheHsAuthApplication, hsAuthApplication)
+		defer l.Unlock()
 		return 0, err
+	} else {
+		result, err := stmtIns.Exec(args...)
+		if err != nil {
+			return 0, err
+		}
+		for i := 0; i < len(Afterfun.Add); i++ { //后置hooks
+			Afterfun.Add[i]()
+		}
+		_, e := result.LastInsertId()
+		if err == nil && e != nil {
+			return 0, nil
+		}
+		return result.LastInsertId()
 	}
-	for i := 0; i < len(Afterfun.Add); i++ { //后置hooks
-		Afterfun.Add[i]()
-	}
-	return result.LastInsertId()
+
 }
 	
 

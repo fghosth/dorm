@@ -139,14 +139,33 @@ func ({{{objvar}}} {{{obj}}}) Add() (int64, error) {
 	{{/each}}
 	sql{{{obj}}} = sqlstr
 	args{{{obj}}} = args
-	result, err := stmtIns.Exec(args...)
-	if err != nil {
+
+
+	if UseAddCache {
+		if !addCacheFlag{{{obj}}}  {
+			{{{objvar}}}.StartAddCache()
+			addCacheFlag{{{obj}}}  = true
+		}
+		l := new(sync.RWMutex)
+		l.Lock()
+		addCache{{{obj}}} = append(addCache{{{obj}}}, {{{objvar}}})
+		defer l.Unlock()
 		return 0, err
+	} else {
+		result, err := stmtIns.Exec(args...)
+		if err != nil {
+			return 0, err
+		}
+		for i := 0; i < len(Afterfun.Add); i++ { //后置hooks
+			Afterfun.Add[i]()
+		}
+		_, e := result.LastInsertId()
+		if err == nil && e != nil {
+			return 0, nil
+		}
+		return result.LastInsertId()
 	}
-	for i := 0; i < len(Afterfun.Add); i++ { //后置hooks
-		Afterfun.Add[i]()
-	}
-	return result.LastInsertId()
+
 }
 	`
 	AddBatch_TPL = `
@@ -427,6 +446,9 @@ var (
 	args{{{obj}}} []interface{}
 	dbconn{{{obj}}} *sql.DB
 	driver{{{obj}}} string
+	addCache{{{obj}}} []interface{} //添加缓存数组
+	count{{{obj}}} int              //计数 秒
+	addCacheFlag{{{obj}}}      = false //缓存进程是否启动
 )
 `
 	Header_TPL = `
@@ -440,6 +462,34 @@ _ "github.com/lib/pq"
 )
 `
 	Function_TPL = `
+	//检查增加缓存
+	func ({{{objvar}}} {{{obj}}}) checkAddCache() {
+		for range time.Tick(1 * time.Second) {
+			if len(addCache{{{obj}}}) >= AddCacheLen || count{{{obj}}} >= AddCacheExp {
+				err := {{{objvar}}}.AddBatch(addCache{{{obj}}})
+				if err != nil {
+					fmt.Println(err)
+				}
+				count{{{obj}}} = 0
+				addCache{{{obj}}} = make([]interface{}, 0)
+			}
+			l := new(sync.RWMutex)
+			l.Lock()
+			count{{{obj}}}++
+			l.Unlock()
+		}
+	}
+
+
+
+	//开始添加缓存进程
+	func ({{{objvar}}} {{{obj}}}) StartAddCache()  {
+		if UseAddCache {
+			addCache{{{obj}}} = make([]interface{}, 0)
+			go {{{objvar}}}.checkAddCache()
+		}
+	}
+
 //返回执行语句后sql，调试用
 func ({{{objvar}}} {{{obj}}}) GetSql() (string, []interface{}) {
 	return sql{{{obj}}}, args{{{obj}}}
@@ -476,7 +526,9 @@ func ({{{objvar}}} {{{obj}}}) SetDBConn(db, str string) {
 func New{{{obj}}}() {{{obj}}} {
 	dbconn{{{obj}}} = DB
 	driver{{{obj}}} = Driver
-	return {{{obj}}}{}
+	{{{objvar}}} := {{{obj}}}{}
+
+	return {{{objvar}}}
 }
 `
 	DAO_TPL = `
@@ -667,6 +719,9 @@ var (
 	useCache  = true  //是否使用缓存
 	cacheType = "ARC" //缓存类型:LRU,LFU,ARC
 	cache     gcache.Cache
+	UseAddCache = true           //是否使用插入缓存 如每2秒写一次数据库，或者超过300条写一次数据库
+	AddCacheLen = 300            //插入缓存数量
+	AddCacheExp = 3              //插入缓存过期时间 秒
 	UT        = util.Dstring{} //工具类
 )
 

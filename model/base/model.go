@@ -30,6 +30,9 @@ var (
 	useCache  = true  //是否使用缓存
 	cacheType = "ARC" //缓存类型:LRU,LFU,ARC
 	cache     gcache.Cache
+	UseAddCache = true           //是否使用插入缓存 如每2秒写一次数据库，或者超过300条写一次数据库
+	AddCacheLen = 300            //插入缓存数量
+	AddCacheExp = 3              //插入缓存过期时间 秒
 	UT        = util.Dstring{} //工具类
 )
 

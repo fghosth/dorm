@@ -19,23 +19,24 @@ import (
 var ServiceI = make(map[string]string)
 
 const (
-	ENDPOINT     = "endpoints.go"
-	TRANSPORT    = "transport.go"
-	LOG          = "logging.go"
-	SERVICE      = "service.go"
-	PROXY        = "proxying.go"
-	INSTRUMENT   = "instrumenting.go"
-	SERVICE_FILE = "serviceI.go"
-	UTIL_FILE    = "util/util.go"
+	ENDPOINT   = "endpoints.go"
+	TRANSPORT  = "transport.go"
+	LOG        = "logging.go"
+	SERVICE    = "service.go"
+	PROXY      = "proxying.go"
+	INSTRUMENT = "instrumenting.go"
+
+	UTIL_FILE = "util/util.go"
 )
 
 var (
-	COVRE = false    //已存在文件是否覆盖true为覆盖
-	path  = "./mem/" //路径
-	IName = ""       //接口名称
-	pat   = "[ ]+"   //正则 查询接口名称去除多个空格用
-	PName = ""       //包名
-	ut    = new(util.Dstring)
+	COVRE        = false  //已存在文件是否覆盖true为覆盖
+	path         = "./"   //路径
+	IName        = ""     //接口名称
+	pat          = "[ ]+" //正则 查询接口名称去除多个空格用
+	PName        = ""     //包名
+	ut           = new(util.Dstring)
+	SERVICE_FILE = "serviceI.go"
 )
 
 var (
@@ -52,6 +53,9 @@ func CgokitFile(c *cli.Context) error {
 		COVRE = true
 	} else {
 		COVRE = false
+	}
+	if c.String("file") != "" {
+		SERVICE_FILE = c.String("file")
 	}
 	//获取接口信息，初始化变量
 	err := getSI()
@@ -299,12 +303,12 @@ func createInstrument() error {
 	requestCount   metrics.Counter
 	requestLatency metrics.Histogram
 	` + "\n"
-	str = str + IName + "\n}\n"
+	str = str + "next " + IName + "\n}\n"
 	str = str + "func NewInstrumentingService(counter metrics.Counter, latency metrics.Histogram, s " + IName + ") " + IName + " {\n"
 	str = str + `return &instrumentingService{
 			requestCount:   counter,
 			requestLatency: latency,` + "\n"
-	str = str + IName + ": s,"
+	str = str + "next: s,"
 	str = str + `
 		}
 	}` + "\n"
@@ -321,7 +325,7 @@ func createInstrument() error {
 		mby = ut.GetMeth(mby)
 
 		//去除类型变成abc(a,b,c) 结束
-		str = str + "return s." + IName + "." + mby + "\n"
+		str = str + "return s.next." + mby + "\n"
 		str = str + "}\n"
 	}
 	sf, err := os.Create(path + INSTRUMENT)
@@ -354,7 +358,7 @@ func createLogging() error {
 		` + "\n"
 	str = str + "type loggingService struct {\n"
 	str = str + "logger log.Logger\n"
-	str = str + IName + "\n}\n"
+	str = str + "next " + IName + "\n}\n"
 	str = str + "func NewLoggingService(logger log.Logger, s " + IName + ") " + IName + " {\n"
 	str = str + `return &loggingService{logger, s}
 	}` + "\n"
@@ -372,7 +376,7 @@ func createLogging() error {
 		mby = ut.GetMeth(mby)
 
 		//去除类型变成abc(a,b,c) 结束
-		str = str + "return s." + IName + "." + mby + "\n"
+		str = str + "return s.next." + mby + "\n"
 		str = str + "}\n"
 	}
 	sf, err := os.Create(path + LOG)

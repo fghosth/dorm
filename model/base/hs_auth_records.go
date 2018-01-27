@@ -4,6 +4,9 @@ import (
  "database/sql"
  "log"
  "strconv"
+ "fmt"
+ "sync"
+ "time"
 _ "github.com/go-sql-driver/mysql"
 _ "github.com/lib/pq"
 )
@@ -14,6 +17,9 @@ var (
 	argsHsAuthRecords []interface{}
 	dbconnHsAuthRecords *sql.DB
 	driverHsAuthRecords string
+	addCacheHsAuthRecords []interface{} //添加缓存数组
+	countHsAuthRecords int              //计数 秒
+	addCacheFlagHsAuthRecords      = false //缓存进程是否启动
 )
 
 type HsAuthRecords struct{
@@ -32,6 +38,34 @@ type HsAuthRecords struct{
  		DeletedAt string  `dormCol:"deleted_at" dormMysqlType:"timestamp" dorm:"DEFAULT NULL"`
  		StatusAt int8  `dormCol:"status_at" dormMysqlType:"tinyint(4)" dorm:"NOT NULL;DEFAULT '1'"`
    }
+
+	//检查增加缓存
+	func (hsAuthRecords HsAuthRecords) checkAddCache() {
+		for range time.Tick(1 * time.Second) {
+			if len(addCacheHsAuthRecords) >= AddCacheLen || countHsAuthRecords >= AddCacheExp {
+				err := hsAuthRecords.AddBatch(addCacheHsAuthRecords)
+				if err != nil {
+					fmt.Println(err)
+				}
+				countHsAuthRecords = 0
+				addCacheHsAuthRecords = make([]interface{}, 0)
+			}
+			l := new(sync.RWMutex)
+			l.Lock()
+			countHsAuthRecords++
+			l.Unlock()
+		}
+	}
+
+
+
+	//开始添加缓存进程
+	func (hsAuthRecords HsAuthRecords) StartAddCache()  {
+		if UseAddCache {
+			addCacheHsAuthRecords = make([]interface{}, 0)
+			go hsAuthRecords.checkAddCache()
+		}
+	}
 
 //返回执行语句后sql，调试用
 func (hsAuthRecords HsAuthRecords) GetSql() (string, []interface{}) {
@@ -69,7 +103,9 @@ func (hsAuthRecords HsAuthRecords) SetDBConn(db, str string) {
 func NewHsAuthRecords() HsAuthRecords {
 	dbconnHsAuthRecords = DB
 	driverHsAuthRecords = Driver
-	return HsAuthRecords{}
+	hsAuthRecords := HsAuthRecords{}
+
+	return hsAuthRecords
 }
 
 
@@ -300,14 +336,33 @@ func (hsAuthRecords HsAuthRecords) Add() (int64, error) {
 		
 	sqlHsAuthRecords = sqlstr
 	argsHsAuthRecords = args
-	result, err := stmtIns.Exec(args...)
-	if err != nil {
+
+
+	if UseAddCache {
+		if !addCacheFlagHsAuthRecords  {
+			hsAuthRecords.StartAddCache()
+			addCacheFlagHsAuthRecords  = true
+		}
+		l := new(sync.RWMutex)
+		l.Lock()
+		addCacheHsAuthRecords = append(addCacheHsAuthRecords, hsAuthRecords)
+		defer l.Unlock()
 		return 0, err
+	} else {
+		result, err := stmtIns.Exec(args...)
+		if err != nil {
+			return 0, err
+		}
+		for i := 0; i < len(Afterfun.Add); i++ { //后置hooks
+			Afterfun.Add[i]()
+		}
+		_, e := result.LastInsertId()
+		if err == nil && e != nil {
+			return 0, nil
+		}
+		return result.LastInsertId()
 	}
-	for i := 0; i < len(Afterfun.Add); i++ { //后置hooks
-		Afterfun.Add[i]()
-	}
-	return result.LastInsertId()
+
 }
 	
 

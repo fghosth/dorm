@@ -4,6 +4,9 @@ import (
  "database/sql"
  "log"
  "strconv"
+ "fmt"
+ "sync"
+ "time"
 _ "github.com/go-sql-driver/mysql"
 _ "github.com/lib/pq"
 )
@@ -14,6 +17,9 @@ var (
 	argsHsAuthApi []interface{}
 	dbconnHsAuthApi *sql.DB
 	driverHsAuthApi string
+	addCacheHsAuthApi []interface{} //添加缓存数组
+	countHsAuthApi int              //计数 秒
+	addCacheFlagHsAuthApi      = false //缓存进程是否启动
 )
 
 type HsAuthApi struct{
@@ -26,6 +32,34 @@ type HsAuthApi struct{
  		DeletedAt string  `dormCol:"deleted_at" dormMysqlType:"timestamp" dorm:"DEFAULT NULL"`
  		StatusAt int8  `dormCol:"status_at" dormMysqlType:"tinyint(4)" dorm:"NOT NULL;DEFAULT '1'"`
    }
+
+	//检查增加缓存
+	func (hsAuthApi HsAuthApi) checkAddCache() {
+		for range time.Tick(1 * time.Second) {
+			if len(addCacheHsAuthApi) >= AddCacheLen || countHsAuthApi >= AddCacheExp {
+				err := hsAuthApi.AddBatch(addCacheHsAuthApi)
+				if err != nil {
+					fmt.Println(err)
+				}
+				countHsAuthApi = 0
+				addCacheHsAuthApi = make([]interface{}, 0)
+			}
+			l := new(sync.RWMutex)
+			l.Lock()
+			countHsAuthApi++
+			l.Unlock()
+		}
+	}
+
+
+
+	//开始添加缓存进程
+	func (hsAuthApi HsAuthApi) StartAddCache()  {
+		if UseAddCache {
+			addCacheHsAuthApi = make([]interface{}, 0)
+			go hsAuthApi.checkAddCache()
+		}
+	}
 
 //返回执行语句后sql，调试用
 func (hsAuthApi HsAuthApi) GetSql() (string, []interface{}) {
@@ -63,7 +97,9 @@ func (hsAuthApi HsAuthApi) SetDBConn(db, str string) {
 func NewHsAuthApi() HsAuthApi {
 	dbconnHsAuthApi = DB
 	driverHsAuthApi = Driver
-	return HsAuthApi{}
+	hsAuthApi := HsAuthApi{}
+
+	return hsAuthApi
 }
 
 
@@ -276,14 +312,33 @@ func (hsAuthApi HsAuthApi) Add() (int64, error) {
 		
 	sqlHsAuthApi = sqlstr
 	argsHsAuthApi = args
-	result, err := stmtIns.Exec(args...)
-	if err != nil {
+
+
+	if UseAddCache {
+		if !addCacheFlagHsAuthApi  {
+			hsAuthApi.StartAddCache()
+			addCacheFlagHsAuthApi  = true
+		}
+		l := new(sync.RWMutex)
+		l.Lock()
+		addCacheHsAuthApi = append(addCacheHsAuthApi, hsAuthApi)
+		defer l.Unlock()
 		return 0, err
+	} else {
+		result, err := stmtIns.Exec(args...)
+		if err != nil {
+			return 0, err
+		}
+		for i := 0; i < len(Afterfun.Add); i++ { //后置hooks
+			Afterfun.Add[i]()
+		}
+		_, e := result.LastInsertId()
+		if err == nil && e != nil {
+			return 0, nil
+		}
+		return result.LastInsertId()
 	}
-	for i := 0; i < len(Afterfun.Add); i++ { //后置hooks
-		Afterfun.Add[i]()
-	}
-	return result.LastInsertId()
+
 }
 	
 

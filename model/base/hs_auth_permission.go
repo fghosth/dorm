@@ -4,6 +4,9 @@ import (
  "database/sql"
  "log"
  "strconv"
+ "fmt"
+ "sync"
+ "time"
 _ "github.com/go-sql-driver/mysql"
 _ "github.com/lib/pq"
 )
@@ -14,6 +17,9 @@ var (
 	argsHsAuthPermission []interface{}
 	dbconnHsAuthPermission *sql.DB
 	driverHsAuthPermission string
+	addCacheHsAuthPermission []interface{} //添加缓存数组
+	countHsAuthPermission int              //计数 秒
+	addCacheFlagHsAuthPermission      = false //缓存进程是否启动
 )
 
 type HsAuthPermission struct{
@@ -25,6 +31,34 @@ type HsAuthPermission struct{
  		DeletedAt string  `dormCol:"deleted_at" dormMysqlType:"timestamp" dorm:"DEFAULT NULL"`
  		StatusAt int8  `dormCol:"status_at" dormMysqlType:"tinyint(4)" dorm:"NOT NULL;DEFAULT '1'"`
    }
+
+	//检查增加缓存
+	func (hsAuthPermission HsAuthPermission) checkAddCache() {
+		for range time.Tick(1 * time.Second) {
+			if len(addCacheHsAuthPermission) >= AddCacheLen || countHsAuthPermission >= AddCacheExp {
+				err := hsAuthPermission.AddBatch(addCacheHsAuthPermission)
+				if err != nil {
+					fmt.Println(err)
+				}
+				countHsAuthPermission = 0
+				addCacheHsAuthPermission = make([]interface{}, 0)
+			}
+			l := new(sync.RWMutex)
+			l.Lock()
+			countHsAuthPermission++
+			l.Unlock()
+		}
+	}
+
+
+
+	//开始添加缓存进程
+	func (hsAuthPermission HsAuthPermission) StartAddCache()  {
+		if UseAddCache {
+			addCacheHsAuthPermission = make([]interface{}, 0)
+			go hsAuthPermission.checkAddCache()
+		}
+	}
 
 //返回执行语句后sql，调试用
 func (hsAuthPermission HsAuthPermission) GetSql() (string, []interface{}) {
@@ -62,7 +96,9 @@ func (hsAuthPermission HsAuthPermission) SetDBConn(db, str string) {
 func NewHsAuthPermission() HsAuthPermission {
 	dbconnHsAuthPermission = DB
 	driverHsAuthPermission = Driver
-	return HsAuthPermission{}
+	hsAuthPermission := HsAuthPermission{}
+
+	return hsAuthPermission
 }
 
 
@@ -272,14 +308,33 @@ func (hsAuthPermission HsAuthPermission) Add() (int64, error) {
 		
 	sqlHsAuthPermission = sqlstr
 	argsHsAuthPermission = args
-	result, err := stmtIns.Exec(args...)
-	if err != nil {
+
+
+	if UseAddCache {
+		if !addCacheFlagHsAuthPermission  {
+			hsAuthPermission.StartAddCache()
+			addCacheFlagHsAuthPermission  = true
+		}
+		l := new(sync.RWMutex)
+		l.Lock()
+		addCacheHsAuthPermission = append(addCacheHsAuthPermission, hsAuthPermission)
+		defer l.Unlock()
 		return 0, err
+	} else {
+		result, err := stmtIns.Exec(args...)
+		if err != nil {
+			return 0, err
+		}
+		for i := 0; i < len(Afterfun.Add); i++ { //后置hooks
+			Afterfun.Add[i]()
+		}
+		_, e := result.LastInsertId()
+		if err == nil && e != nil {
+			return 0, nil
+		}
+		return result.LastInsertId()
 	}
-	for i := 0; i < len(Afterfun.Add); i++ { //后置hooks
-		Afterfun.Add[i]()
-	}
-	return result.LastInsertId()
+
 }
 	
 

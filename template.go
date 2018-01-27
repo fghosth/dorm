@@ -12,7 +12,8 @@ var (
 ErrEmpty = errors.New("empty string")
 )
 {{c}}`
-	TPL_UTIL = `package util
+	TPL_UTIL = `
+	package util
 import(
   // "fmt"
   "errors"
@@ -31,5 +32,7 @@ func (ds *Dstring) FUPer(str string) (string,error){
     v[0] += 32
   }
   return string(v),nil
-}`
+}
+
+`
 )

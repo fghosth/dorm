@@ -33,6 +33,11 @@ func main() {
 					Usage: "要生成的组件，默认all.可选值：service,logging,proxying(TODO),transport,endpoint,instrumenting,util。多选请用分号分割 logging:proxying:endpoint",
 				},
 				cli.StringFlag{
+					Name:  "file, f",
+					Value: "serviceI.go",
+					Usage: "指定接口文件,默认为",
+				},
+				cli.StringFlag{
 					Name:  "cover",
 					Value: "false",
 					Usage: "是否覆盖已有文件，默认值false.可选值：true，false",
@@ -45,8 +50,13 @@ func main() {
 		{
 			Name:    "test",
 			Aliases: []string{"t"},
-			Usage:   "根据service生成测试文件",
+			Usage:   "生成测试文件",
 			Flags: []cli.Flag{
+				cli.StringFlag{
+					Name:  "DIR, d",
+					Value: "",
+					Usage: "需要生成测试文件的目录",
+				},
 				cli.StringFlag{
 					Name:  "component, c",
 					Value: "none",
