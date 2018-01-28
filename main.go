@@ -58,9 +58,9 @@ func main() {
 					Usage: "需要生成测试文件的目录",
 				},
 				cli.StringFlag{
-					Name:  "component, c",
-					Value: "none",
-					Usage: "使用哪一个组建构建测试文件.可选值：none,goconvey,Testify。",
+					Name:  "cover",
+					Value: "false",
+					Usage: "是否覆盖已有文件，默认值false.可选值：true，false",
 				},
 			},
 			Action: func(c *cli.Context) error {

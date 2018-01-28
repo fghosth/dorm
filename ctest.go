@@ -7,9 +7,9 @@ import (
 	"os"
 	"regexp"
 
-	"github.com/cweill/gotests"
-	"github.com/k0kubun/pp"
 	"github.com/urfave/cli"
+	"jvole.com/createProject/gotests"
+	"jvole.com/createProject/util"
 	// "io/ioutil"
 )
 
@@ -60,11 +60,42 @@ func createTestSV(file string) error {
 	}
 	gopt := parseOptions(os.Stdout, popt)
 	if gopt == nil {
+		fmt.Println("配置错误")
 		return errors.New("配置错误")
 	}
 
 	gotests.GenerateTests(file, gopt)
-	pp.Println(len(gotests.TestStr))
+
+	testout := gotests.TestOut
+	if len(testout) == 0 {
+		fmt.Println("测试文件已生成，如需重新生成请删除测试文件。")
+		return errors.New("测试文件已生成，如需重新生成请删除测试文件。")
+	}
+	for _, v := range testout {
+		filename := v.FileName
+		testStr := v.TestStr
+		exist, err := ut.FileOrPathExists(filename)
+
+		if !COVRE && exist {
+			fmt.Println(util.Red(filename + "文件已存在"))
+			return err
+		}
+		sf, err := os.Create(filename)
+		if err != nil {
+			fmt.Println(err)
+			return err
+		}
+		_, err = sf.Write([]byte(testStr))
+		if err != nil {
+			fmt.Println(err)
+			return err
+		}
+		if !(!COVRE && exist) && err == nil {
+			fmt.Println(filename + "生成成功")
+		}
+	}
+	// pp.Println(gotests.TestOut)
+
 	return nil
 }
 

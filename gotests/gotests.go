@@ -10,10 +10,10 @@ import (
 	"sort"
 	"sync"
 
-	"github.com/cweill/gotests/internal/goparser"
-	"github.com/cweill/gotests/internal/input"
-	"github.com/cweill/gotests/internal/models"
-	"github.com/cweill/gotests/internal/output"
+	"jvole.com/createProject/gotests/internal/goparser"
+	"jvole.com/createProject/gotests/internal/input"
+	"jvole.com/createProject/gotests/internal/models"
+	"jvole.com/createProject/gotests/internal/output"
 )
 
 // Options provides custom filters and parameters for generating tests.
@@ -26,7 +26,12 @@ type Options struct {
 	Importer    func() types.Importer // A custom importer.
 }
 
-var TestStr []string
+type Testout struct { //derek
+	TestStr  string
+	FileName string
+}
+
+var TestOut []Testout
 
 // A GeneratedTest contains information about a test file with generated tests.
 type GeneratedTest struct {
@@ -58,8 +63,9 @@ func GenerateTests(srcPath string, opt *Options) ([]*GeneratedTest, error) {
 
 // result stores a generateTest result.
 type result struct {
-	gt  *GeneratedTest
-	err error
+	gt       *GeneratedTest
+	filename string //derek
+	err      error
 }
 
 // parallelize generates tests for the given source files concurrently.
@@ -70,10 +76,12 @@ func parallelize(srcFiles, files []models.Path, opt *Options) ([]*GeneratedTest,
 		wg.Add(1)
 		// Worker
 		go func(src models.Path) {
-			fmt.Println(src)
+
 			defer wg.Done()
 			r := &result{}
 			r.gt, r.err = generateTest(src, files, opt)
+			r.filename = src.TestPath()
+			// fmt.Println(r)//derek
 			rs <- r
 		}(src)
 	}
@@ -93,7 +101,7 @@ func readResults(rs <-chan *result) ([]*GeneratedTest, error) {
 			return nil, r.err
 		}
 		if r.gt != nil {
-			TestStr = append(TestStr, string(r.gt.Output))
+			TestOut = append(TestOut, Testout{string(r.gt.Output), r.filename})
 			gts = append(gts, r.gt)
 		}
 	}
