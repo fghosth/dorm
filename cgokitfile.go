@@ -1,22 +1,21 @@
 package main
 
 import (
-	"bufio"
 	"errors"
 	"fmt"
-	"io"
+	"io/ioutil"
 	"os"
-	"regexp"
 	"strings"
 
 	"github.com/aymerick/raymond"
 	"github.com/bndr/gotabulate"
 	"github.com/urfave/cli"
+	"jvole.com/createProject/lexer"
 	"jvole.com/createProject/util"
 	// "io/ioutil"
 )
 
-var ServiceI = make(map[string]string)
+var ServiceI []lexer.FuncM
 
 const (
 	ENDPOINT   = "endpoints.go"
@@ -25,8 +24,7 @@ const (
 	SERVICE    = "service.go"
 	PROXY      = "proxying.go"
 	INSTRUMENT = "instrumenting.go"
-
-	UTIL_FILE = "util/util.go"
+	UTIL_FILE  = "util/util.go"
 )
 
 var (
@@ -37,6 +35,7 @@ var (
 	PName        = ""     //包名
 	ut           = new(util.Dstring)
 	SERVICE_FILE = "serviceI.go"
+	SERVICE_NAME string //接口服务的名称
 )
 
 var (
@@ -74,13 +73,13 @@ func CgokitFile(c *cli.Context) error {
 			string_6 = []string{"service.go", "success", ""}
 		}
 
-		fmt.Println("===================创建util.go文件")
-		err = createUtil()
-		if err != nil {
-			string_1 = []string{"Util.go", "failed", err.Error()}
-		} else {
-			string_1 = []string{"Util.go", "success", ""}
-		}
+		// fmt.Println("===================创建util.go文件")
+		// err = createUtil()
+		// if err != nil {
+		// 	string_1 = []string{"Util.go", "failed", err.Error()}
+		// } else {
+		// 	string_1 = []string{"Util.go", "success", ""}
+		// }
 
 		fmt.Println("===================创建endpoint.go文件")
 		err = createEndpoint()
@@ -160,14 +159,14 @@ func CgokitFile(c *cli.Context) error {
 				} else {
 					string_4 = []string{"instrumenting.go", "success", ""}
 				}
-			case "util":
-				fmt.Println("===================创建util.go文件")
-				err := createUtil()
-				if err != nil {
-					string_1 = []string{"util.go", "failed", err.Error()}
-				} else {
-					string_1 = []string{"util.go", "success", ""}
-				}
+				// case "util":
+				// 	fmt.Println("===================创建util.go文件")
+				// 	err := createUtil()
+				// 	if err != nil {
+				// 		string_1 = []string{"util.go", "failed", err.Error()}
+				// 	} else {
+				// 		string_1 = []string{"util.go", "success", ""}
+				// 	}
 			}
 		}
 	}
@@ -197,78 +196,71 @@ func createTransport() error {
 	if !COVRE && exist {
 		return err
 	}
-	str := "package " + PName + "\n"
-	str = str + `import (
-		"context"
-		"encoding/json"
-		"errors"
-		"net/http"
-		"github.com/gorilla/mux"
+	serverfield := make([]string, len(ServiceI))
+	handlefield := make([]string, len(ServiceI))
+	decodeRequestfield := make([]string, len(ServiceI))
+	for _, v := range ServiceI {
+		str := `
+e` + v.FunName + ` := make` + v.FunName + `Endpoint(bs)
+e` + v.FunName + ` = basic.AuthMiddleware(User, Password, "")(e` + v.FunName + `)
+e` + v.FunName + ` = middleware.ValidMiddleware()(e` + v.FunName + `)
+e` + v.FunName + ` = ratelimit.NewErroringLimiter(rate.NewLimiter(rate.Every(time.Second), qps))(e` + v.FunName + `)
+` + v.FunName + `Handler := kithttp.NewServer(
+	e` + v.FunName + `,
+	decode` + v.FunName + `Request,
+	encodeResponse,
+	opts...,
+)
+		`
+		serverfield = append(serverfield, str)
+	}
 
-		kitlog "github.com/go-kit/kit/log"
-		kithttp "github.com/go-kit/kit/transport/http"
-		)` + "\n"
-	str = str + "var errBadRoute = errors.New(\"bad route\")\n"
-	str = str + "func MakeHandler(bs " + IName + ", logger kitlog.Logger) http.Handler {\n"
-	str = str + `opts := []kithttp.ServerOption{
-		kithttp.ServerErrorLogger(logger),
-		kithttp.ServerErrorEncoder(encodeError),
-	}` + "\n"
-	str = str + "r := mux.NewRouter()\n"
-	//MakeHandler
-	for mname, _ := range ServiceI {
-		// mn, _ := ut.FUPer(mname)
-		str = str + mname + "Handler := kithttp.NewServer(\n"
-		str = str + "make" + mname + "Endpoint(bs),\n"
-		str = str + "decode" + mname + "Request,\n"
-		str = str + "encodeResponse,\n"
-		str = str + "opts...,\n)\n"
+	for _, v := range ServiceI {
+		str := `r.Handle("/v1/` + v.FunName + `", ` + v.FunName + `Handler).Methods("POST")`
+		handlefield = append(handlefield, str)
+	}
+
+	for _, v := range ServiceI {
+		str := `
+func decode` + v.FunName + `Request(ctx context.Context, r *http.Request) (interface{}, error) {
+	var body struct {
 
 	}
-	for mname, _ := range ServiceI {
-		mn, _ := ut.FUPer(mname)
-		str = str + "r.Handle(\"/URL/v1/" + mn + "\", " + mname + "Handler).Methods(\"GET\")\n"
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		return nil, err
 	}
-	str = str + "return r\n}\n"
+	defer func(begin time.Time) {
+		pc, file, line, _ := runtime.Caller(1)
+		f := runtime.FuncForPC(pc)
+		level.Debug(util.KitLogger).Log(
+			"method", f.Name(),
+			"file", path.Base(file),
+			"line", line,
+			"request", body,
+			"took", time.Since(begin).Nanoseconds()/1000,
+		)
+	}(time.Now())
+	return ` + v.FunName + `Request{
 
-	for mname, _ := range ServiceI {
-		mn, _ := ut.FUPer(mname)
-		str = str + "func decode" + mname + "Request(_ context.Context, r *http.Request) (interface{}, error) {\n"
-		str = str + `vars := mux.Vars(r)
-			id, ok := vars["id"]
-			if !ok {
-				return nil, errBadRoute
-			}` + "\n"
-		str = str + "return " + mn + "Request{}, nil\n}\n"
-	}
-	str = str + `func encodeResponse(ctx context.Context, w http.ResponseWriter, response interface{}) error {
-	if e, ok := response.(errorer); ok && e.error() != nil {
-		encodeError(ctx, e.error(), w)
-		return nil
-	}
-	w.Header().Set("Content-Type", "application/json; charset=utf-8")
-	return json.NewEncoder(w).Encode(response)
+	}, nil
 }
-
-type errorer interface {
-	error() error
-}
-
-// encode errors from business-logic
-func encodeError(_ context.Context, err error, w http.ResponseWriter) {
-	w.Header().Set("Content-Type", "application/json; charset=utf-8")
-	switch err {
-	case errBadRoute:
-		w.WriteHeader(http.StatusNotFound)
-	case errBadRoute:
-		w.WriteHeader(http.StatusBadRequest)
-	default:
-		w.WriteHeader(http.StatusInternalServerError)
+	`
+		decodeRequestfield = append(decodeRequestfield, str)
 	}
-	json.NewEncoder(w).Encode(map[string]interface{}{
-		"error": err.Error(),
-	})
-}`
+
+	//根据模板生成
+	ctx := map[string]interface{}{
+		"pName":              PName,
+		"sname":              SERVICE_NAME,
+		"serverfield":        serverfield,
+		"handlefield":        handlefield,
+		"decodeRequestfield": decodeRequestfield,
+	}
+
+	str, err := raymond.Render(TPL_TRANSPORT, ctx)
+	if err != nil {
+		fmt.Println(err)
+	}
 	sf, err := os.Create(path + TRANSPORT)
 	if err != nil {
 		// fmt.Println(err)
@@ -290,44 +282,31 @@ func createInstrument() error {
 	if !COVRE && exist {
 		return err
 	}
-	str := "package " + PName + "\n"
-	str = str + `import(
-	_ "fmt"
-	"time"
-	"github.com/go-kit/kit/metrics"
-	)
-	var (
-		)
-		` + "\n"
-	str = str + `type instrumentingService struct {
-	requestCount   metrics.Counter
-	requestLatency metrics.Histogram
-	` + "\n"
-	str = str + "next " + IName + "\n}\n"
-	str = str + "func NewInstrumentingService(counter metrics.Counter, latency metrics.Histogram, s " + IName + ") " + IName + " {\n"
-	str = str + `return &instrumentingService{
-			requestCount:   counter,
-			requestLatency: latency,` + "\n"
-	str = str + "next: s,"
-	str = str + `
-		}
-	}` + "\n"
-
-	for _, mby := range ServiceI {
-		str = str + "func (s *instrumentingService) " + mby + "{\n"
-		str = str + `defer func(begin time.Time) {
-			s.requestCount.With("method", "book").Add(1)
-			s.requestLatency.With("method", "book").Observe(time.Since(begin).Seconds())
-		}(time.Now())` + "\n"
-		// 处理函数字符串中的返回值和关键字 abc(a,b string, c bool) (string,error)
-		mby = strings.Split(mby, ") ")[0] + ")" //去除返回值
-		//去除类型变成abc(a,b,c)
-		mby = ut.GetMeth(mby)
-
-		//去除类型变成abc(a,b,c) 结束
-		str = str + "return s.next." + mby + "\n"
-		str = str + "}\n"
+	funfield := make([]string, len(ServiceI))
+	for _, v := range ServiceI {
+		str := `
+			func (s *instrumentingService) ` + v.FunName + v.Args + v.Returns + ` {
+				defer func(begin time.Time) {
+					s.requestCount.With("method", "Insert").Add(1)
+					s.requestLatency.With("method", "` + v.FunName + `").Observe(time.Since(begin).Seconds())
+				}(time.Now())
+				return s.next.` + v.FunName + lexer.GetFunFields(v.Args) + `
+			}
+		`
+		funfield = append(funfield, str)
 	}
+	//根据模板生成
+	ctx := map[string]interface{}{
+		"pName":    PName,
+		"sname":    SERVICE_NAME,
+		"funfield": funfield,
+	}
+
+	str, err := raymond.Render(TPL_INSTRUMENTING, ctx)
+	if err != nil {
+		fmt.Println(err)
+	}
+
 	sf, err := os.Create(path + INSTRUMENT)
 	if err != nil {
 		// fmt.Println(err)
@@ -347,38 +326,38 @@ func createLogging() error {
 	if !COVRE && exist {
 		return err
 	}
-	str := "package " + PName + "\n"
-	str = str + `import(
-	_ "fmt"
-	"time"
-	"github.com/go-kit/kit/log"
-	)
-	var (
-		)
-		` + "\n"
-	str = str + "type loggingService struct {\n"
-	str = str + "logger log.Logger\n"
-	str = str + "next " + IName + "\n}\n"
-	str = str + "func NewLoggingService(logger log.Logger, s " + IName + ") " + IName + " {\n"
-	str = str + `return &loggingService{logger, s}
-	}` + "\n"
-	for _, mby := range ServiceI {
-		str = str + "func (s *loggingService) " + mby + "{\n"
-		str = str + `defer func(begin time.Time) {
-				s.logger.Log(
-					"method", "YOUR_METHOD_NAME",
-					"took", time.Since(begin),
+	funfield := make([]string, len(ServiceI))
+	for _, v := range ServiceI {
+		str := `
+		func (s *loggingService) ` + v.FunName + v.Args + v.Returns + ` {
+			defer func(begin time.Time) {
+				pc, file, line, _ := runtime.Caller(1)
+				f := runtime.FuncForPC(pc)
+				level.Info(s.logger).Log(
+					"method", f.Name(),
+					"file", path.Base(file),
+					"line", line,
+					"took", time.Since(begin).Nanoseconds()/1000,
 				)
-			}(time.Now())` + "\n"
-		// 处理函数字符串中的返回值和关键字 abc(a,b string, c bool) (string,error)
-		mby = strings.Split(mby, ") ")[0] + ")" //去除返回值
-		//去除类型变成abc(a,b,c)
-		mby = ut.GetMeth(mby)
+			}(time.Now())
 
-		//去除类型变成abc(a,b,c) 结束
-		str = str + "return s.next." + mby + "\n"
-		str = str + "}\n"
+			return s.next.` + v.FunName + lexer.GetFunFields(v.Args) + `
+		}
+	`
+		funfield = append(funfield, str)
 	}
+	//根据模板生成
+	ctx := map[string]interface{}{
+		"pName":    PName,
+		"sname":    SERVICE_NAME,
+		"funfield": funfield,
+	}
+
+	str, err := raymond.Render(TPL_LOGGING, ctx)
+	if err != nil {
+		fmt.Println(err)
+	}
+
 	sf, err := os.Create(path + LOG)
 	if err != nil {
 		// fmt.Println(err)
@@ -399,26 +378,37 @@ func createEndpoint() error {
 	if !COVRE && exist {
 		return err
 	}
-	str := "package " + PName + "\n"
-	str = str + `import(
-	_ "fmt"
-	"context"
-	"github.com/go-kit/kit/endpoint"
-	)
-	var (
-		)
-		` + "\n"
-	//添加每个方法对应的request，response，err和endpoint
-	for mname, _ := range ServiceI {
-		mn, _ := ut.FUPer(mname)
-		str = str + "type " + mn + "Request struct {}\n"
-		str = str + "type " + mn + "Response struct {Err error `json:\"error,omitempty\"`}\n"
-		str = str + "func (r " + mn + "Response) error() error { return r.Err }\n"
-		str = str + "func make" + mname + "Endpoint(s " + IName + ") endpoint.Endpoint {"
-		str = str + "return func(ctx context.Context, request interface{}) (interface{}, error) {\n"
-		str = str + "return " + mn + "Response{Err: nil}, nil}\n"
-		str = str + "}\n"
+	funfield := make([]string, len(ServiceI))
+	for _, v := range ServiceI {
+		str := `
+			type ` + v.FunName + `Request struct {
+				Uid   uint64
+				Tags  map[string]string
+				Field map[string]interface{}
+				Table string
+			}
+
+			func make` + v.FunName + `Endpoint(s ` + SERVICE_NAME + `) endpoint.Endpoint {
+				return func(ctx context.Context, request interface{}) (interface{}, error) {
+					req := request.(` + v.FunName + `Request)
+					return Response{Errcode: "0", Msg: "ok", Data: nil, Err: nil}, nil
+				}
+			}
+		`
+		funfield = append(funfield, str)
 	}
+	//根据模板生成
+	ctx := map[string]interface{}{
+		"pName":    PName,
+		"sname":    SERVICE_NAME,
+		"funfield": funfield,
+	}
+
+	str, err := raymond.Render(TPL_ENDPOINTS, ctx)
+	if err != nil {
+		fmt.Println(err)
+	}
+
 	sf, err := os.Create(path + ENDPOINT)
 	if err != nil {
 		// fmt.Println(err)
@@ -434,51 +424,19 @@ func createEndpoint() error {
 
 //获得接口信息
 func getSI() error {
-	flag := false //判断是否为接口，判断是否有interface
-	fi, err := os.Open(path + SERVICE_FILE)
+	data, err := ioutil.ReadFile(path + SERVICE_FILE)
 	if err != nil {
-		fmt.Printf("Error: %s\n", err)
+		fmt.Println(err)
 		return err
 	}
-	defer fi.Close()
-
-	br := bufio.NewReader(fi)
-	for {
-		a, _, c := br.ReadLine()
-		if c == io.EOF {
-			break
-		}
-		//匹配多个空格
-		re, _ := regexp.Compile(pat)
-
-		//将多个空格匹配到的部分替换为" "
-		line := re.ReplaceAllString(string(a), " ")
-		//获取包名
-		if strings.Contains(line, "package") {
-			PName = strings.Split(line, " ")[1]
-		}
-		//改变判断接口的标识
-		if strings.Contains(line, "interface") {
-			flag = true
-			//获取interface的名字
-			IName = strings.Split(line, " ")[1]
-
-		}
-		//获取所有接口方法
-		if strings.Contains(line, "(") {
-			mName := strings.Trim(strings.Split(line, "(")[0], "	")
-			mName = strings.Trim(mName, " ")
-			ServiceI[mName] = strings.Trim(line, "	")
-			// fmt.Println(mName,"===",serviceI[mName])
-		}
-		// fmt.Println(string(a))
-	}
-	// fmt.Println(serviceI)
-	if !flag || strings.EqualFold(PName, "") || len(ServiceI) == 0 {
-		// fmt.Println("此文件不是有效的接口文件缺少报名,缺少接口定义或接口没有任何方法")
-		return ErrNoInterface
-	}
+	ifLexer := new(lexer.InterfaceLexer)
+	ifstr := ifLexer.GetInterfaceStr(string(data))
+	ServiceI = ifLexer.GetIfFuncM(ifstr)
+	SERVICE_NAME = ifLexer.GetServiceName(ifstr)
+	PName = ifLexer.GetPackageName(string(data))
 	return nil
+	// br :=
+
 }
 
 //创建util文件
@@ -515,23 +473,34 @@ func createUtil() error {
 //*只能包含一个接口
 func createService() error {
 	var str string
-	iname, _ := ut.FUPer(IName)
-	//添加接口方法
-	for _, meth := range ServiceI {
+	iname, _ := ut.FUPer(SERVICE_NAME)
+	funfield := make([]string, len(ServiceI))
+	for _, v := range ServiceI {
+		str := v.Comment + `
+			func (s ` + iname + `) ` + v.FunName + v.Args + v.Returns + ` {
+				return nil
+			}
+		`
+		funfield = append(funfield, str)
+	}
 
-		str = str + "func (" + iname + ") " + meth + " {}\n"
+	//根据模板生成
+	ctx := map[string]interface{}{
+		"pName":    PName,
+		"sname":    iname,
+		"funfield": funfield,
 	}
-	ctx := map[string]string{"c": str}
-	fmt.Println(str)
-	output, err := raymond.Render(TPL_SERVICE, ctx)
+
+	str, err := raymond.Render(TPL_SERVICE, ctx)
 	if err != nil {
-		panic("Please report a bug :)")
+		fmt.Println(err)
 	}
+
 	sf, err := os.Create(path + SERVICE)
 	if err != nil {
 		return err
 	}
-	_, err = sf.Write([]byte(output))
+	_, err = sf.Write([]byte(str))
 	if err != nil {
 		return err
 	}

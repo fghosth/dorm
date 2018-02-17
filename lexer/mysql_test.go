@@ -1,9 +1,6 @@
 package lexer_test
 
 import (
-	"fmt"
-	"testing"
-
 	"jvole.com/createProject/lexer"
 )
 
@@ -22,13 +19,13 @@ func init() {
 //
 // }
 
-func TestCreateCockroachSqlFromMysql(t *testing.T) {
-	str := mysqlLexer.CreateTableString(sqlStr)
-	for _, v := range str {
-		name := mysqlLexer.CreateCockroachSqlFromMysql(v)
-		fmt.Println(name)
-	}
-}
+// func TestCreateCockroachSqlFromMysql(t *testing.T) {
+// 	str := mysqlLexer.CreateTableString(sqlStr)
+// 	for _, v := range str {
+// 		name := mysqlLexer.CreateCockroachSqlFromMysql(v)
+// 		fmt.Println(name)
+// 	}
+// }
 
 // func TestInsertStr(t *testing.T) {
 // 	str := mysqlLexer.InsertStr(sqlStr)

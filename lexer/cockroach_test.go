@@ -1,9 +1,6 @@
 package lexer_test
 
 import (
-	"fmt"
-	"testing"
-
 	"jvole.com/createProject/lexer"
 )
 
@@ -15,16 +12,16 @@ func init() {
 	cocksqlStr = cockDBlexer.SqlString("../cockroach.sql")
 }
 
-func TestCockCreateSqlByStructStr(t *testing.T) {
-	sl := new(lexer.StructLexer)
-	fileStr := sl.GetStructFile("../ormstruct/product_information.go")
-	slist := sl.StructStr(fileStr)
-	for _, v := range slist {
-		str := cockDBlexer.CreateSqlByStructStr(v)
-		fmt.Println(str)
-	}
-
-}
+// func TestCockCreateSqlByStructStr(t *testing.T) {
+// 	sl := new(lexer.StructLexer)
+// 	fileStr := sl.GetStructFile("../ormstruct/product_information.go")
+// 	slist := sl.StructStr(fileStr)
+// 	for _, v := range slist {
+// 		str := cockDBlexer.CreateSqlByStructStr(v)
+// 		fmt.Println(str)
+// 	}
+//
+// }
 
 // func TestCockCreateSqlByStruct(t *testing.T) {
 // 	obj := new(lexer.ProductInformation)
