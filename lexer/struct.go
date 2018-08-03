@@ -20,6 +20,8 @@ var (
 	oupPutWord = `[A-Z][a-zA-z\\b]+`
 	//所有tag
 	tagStr = "`.+`"
+	//找主键，主键名必须是id,忽略大小写
+	primaryKey = `(?i)id[ ]+(string|int).+\n`
 )
 
 type StructLexer struct{}
@@ -116,4 +118,23 @@ func (ml *StructLexer) GetStructFile(file string) string {
 	}
 
 	return string(dat)
+}
+
+//找到主键类型
+func (sl *StructLexer) FieldIndexKey(structStr string) string {
+	r := regexp.MustCompile(primaryKey)
+	line := ut.RemovemBlank(r.FindString(structStr))
+	linearr := strings.Split(line, " ") //以空格【 】分割
+
+	var ikey string       //主键类型。int64,string
+	if len(linearr) > 1 { //判断数组是否有2个
+		itype := strings.ToLower(linearr[1]) //取得id类型
+		if itype == "string" {               //判断类型
+			ikey = "string"
+		} else {
+			ikey = "int64"
+		}
+	}
+
+	return ikey
 }

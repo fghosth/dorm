@@ -149,6 +149,15 @@ func (ds *Dstring) FileOrPathExists(path string) (bool, error) {
 	return true, err
 }
 
+//去除重复空格
+func (ds *Dstring) RemovemBlank(str string) string {
+	//2个以上的空格
+	muliblank := `[ ]{2,}`
+	r := regexp.MustCompile(muliblank)
+	ts := r.ReplaceAllString(str, " ")
+	return ts
+}
+
 //获取方法
 func (ds *Dstring) GetMeth(mby string) string {
 	mbyArr := strings.Split(mby, ",")

@@ -78,7 +78,7 @@ func createTestSV(file string) error {
 
 		if !COVRE && exist {
 			fmt.Println(util.Red(filename + "文件已存在"))
-			return err
+			// return err
 		}
 		sf, err := os.Create(filename)
 		if err != nil {

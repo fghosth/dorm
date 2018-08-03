@@ -67,7 +67,7 @@ func ({{{objvar}}} {{{obj}}}) Select(sql string, limit, offset int, value ...int
 }
 	`
 	FindByID_TPL = `
-func ({{{objvar}}} *{{{obj}}}) FindByID(id int64) (interface{}, error) {
+func ({{{objvar}}} *{{{obj}}}) FindByID(id {{{keytype}}}) (interface{}, error) {
 	for i := 0; i < len(Beforefun.FindByID); i++ { //前置hooks
 		Beforefun.FindByID[i]()
 	}
@@ -121,7 +121,7 @@ func ({{{objvar}}} *{{{obj}}}) FindByID(id int64) (interface{}, error) {
 	`
 
 	Add_TPL = `
-func ({{{objvar}}} {{{obj}}}) Add() (int64, error) {
+func ({{{objvar}}} {{{obj}}}) Add() ({{{keytype}}}, error) {
 	for i := 0; i < len(Beforefun.Add); i++ { //前置hooks
 		Beforefun.Add[i]()
 	}
@@ -130,7 +130,7 @@ func ({{{objvar}}} {{{obj}}}) Add() (int64, error) {
 
 	stmtIns, err := dbconn{{{obj}}}.Prepare(sqlstr)
 	if err != nil {
-		return 0, err
+		{{{retstr}}}
 	}
 	defer stmtIns.Close()
 	args := make([]interface{}, {{{len}}})
@@ -150,20 +150,20 @@ func ({{{objvar}}} {{{obj}}}) Add() (int64, error) {
 		l.Lock()
 		addCache{{{obj}}} = append(addCache{{{obj}}}, {{{objvar}}})
 		defer l.Unlock()
-		return 0, err
+		{{{retstr}}}
 	} else {
 		result, err := stmtIns.Exec(args...)
 		if err != nil {
-			return 0, err
+			{{{retstr}}}
 		}
 		for i := 0; i < len(Afterfun.Add); i++ { //后置hooks
 			Afterfun.Add[i]()
 		}
 		_, e := result.LastInsertId()
 		if err == nil && e != nil {
-			return 0, nil
+			{{{retstr}}}
 		}
-		return result.LastInsertId()
+		{{{retIDstr}}}
 	}
 
 }
@@ -371,7 +371,7 @@ func ({{{objvar}}} {{{obj}}}) Exec(sql string, value ...interface{}) (int64, err
 	//获得args字符串(除了update)
 	func get{{{obj}}}ArgsStr(num int) string {
 		var argsStr string
-		switch driverHsAuthApplication {
+		switch driver{{{obj}}} {
 		case "mysql":
 			for i := 0; i < num; i++ {
 				if argsStr == "" {
@@ -411,7 +411,7 @@ func ({{{objvar}}} {{{obj}}}) Exec(sql string, value ...interface{}) (int64, err
 	//获得args字符串(update)
 	func get{{{obj}}}ArgsStrUpdate() string {
 		var argsStr string
-		switch driverHsAuthApplication {
+		switch driver{{{obj}}} {
 		case "mysql":
 			argsStr = "{{{mysqlField}}}"
 		case "mariadb":
@@ -560,7 +560,7 @@ func (dao {{{obj}}}Dao) Select(sql string, limit, offset int, value ...interface
 			 @return struct
 			 @return error 错误
 */
-func (dao *{{{obj}}}Dao) FindByID(id int64) (interface{}, error) {
+func (dao *{{{obj}}}Dao) FindByID(id {{{keytype}}}) (interface{}, error) {
 	res, err := dao.model.FindByID(id)
 	re := res.(*base.{{{obj}}})
 	dao.{{{obj}}} = *re
@@ -572,7 +572,7 @@ func (dao *{{{obj}}}Dao) FindByID(id int64) (interface{}, error) {
 			 @return 返回主键id
 			 @return error 错误
 */
-func (dao {{{obj}}}Dao) Add() (int64, error) {
+func (dao {{{obj}}}Dao) Add() ({{{keytype}}}, error) {
 	b := dao.getObjWithValue(dao)
 	dao.model = &b
 	return dao.model.Add()
@@ -588,7 +588,7 @@ func (dao {{{obj}}}Dao) AddBatch(obj []interface{}) error {
 /*
 			 根据自身struct更新
 			 @parm
-			 @return int64 修改记录的id
+			 @return  修改记录的id
 			 @return error 错误
 */
 func (dao {{{obj}}}Dao) Update() (int64, error) {
@@ -607,7 +607,7 @@ func (dao {{{obj}}}Dao) UpdateBatch(obj []interface{}) error {
 /*
 			 根据自身struct删除
 			 @parm
-			 @return int64 影响行数
+			 @return  影响行数
 			 @return error 错误
 */
 func (dao {{{obj}}}Dao) Delete() (int64, error) {
@@ -626,7 +626,7 @@ func (dao {{{obj}}}Dao) DeleteBatch(obj []interface{}) error {
 /*
  根据自身struct软删除
  @parm
- @return int64 影响行数
+ @return  影响数据id
  @return error 错误
 */
 func (dao {{{obj}}}Dao) SDelete() (int64, error) {
@@ -665,8 +665,6 @@ func (dao {{{obj}}}Dao) GetSql() (string, []interface{}) {
 			 设置当前对象的链接
 			 @db 数据库默认值mysql 支持mysql，mariadb，cockroachDB
 			 @str 数据库连接 『postgresql://derek:123456@localhost:26257/auth?sslmode=disable』 【root:@tcp(localhost:3306)/praise_auth?charset=utf8】
-			 @return int64 影响的行数
-			 @return error 错误
 */
 func (dao {{{obj}}}Dao) SetDBConn(db, str string) {
 	dao.model.SetDBConn(db, str)
@@ -814,14 +812,14 @@ type Model interface {
 		     @return struct
 		     @return error 错误
 	*/
-	FindByID(id int64) (interface{}, error)
+	FindByID(id {{{keytype}}}) (interface{}, error)
 	/*
 			   根据自身struct内容添加
 			   @parm
 		     @return 返回主键id
 		     @return error 错误
 	*/
-	Add() (int64, error)
+	Add() ({{{keytype}}}, error)
 	/*
 			   批量添加
 			   @parm struct数组
@@ -831,7 +829,7 @@ type Model interface {
 	/*
 			   根据自身struct更新
 			   @parm
-		     @return int64 修改记录的id
+		     @return  修改记录的id
 		     @return error 错误
 	*/
 	Update() (int64, error)
@@ -844,14 +842,14 @@ type Model interface {
 	/*
 			   根据自身struct删除
 			   @parm
-		     @return int64 影响行数
+		     @return  影响行数
 		     @return error 错误
 	*/
 	Delete() (int64, error)
 	/*
 			   根据自身struct软删除
 			   @parm
-		     @return int64 影响行数
+		     @return  影响行数
 		     @return error 错误
 	*/
 	SDelete() (int64, error)
@@ -885,8 +883,6 @@ type Model interface {
 			   设置当前对象的链接
 			   @db 数据库默认值mysql 支持mysql，mariadb，cockroachDB
 			   @str 数据库连接 『postgresql://derek:123456@localhost:26257/auth?sslmode=disable』 【root:@tcp(localhost:3306)/praise_auth?charset=utf8】
-		     @return int64 影响的行数
-		     @return error 错误
 	*/
 	SetDBConn(db, str string)
 }

@@ -1,21 +1,3 @@
-Generated TestHsAuthApplication_checkAddCache
-Generated TestHsAuthApplication_StartAddCache
-Generated TestHsAuthApplication_GetSql
-Generated TestHsAuthApplication_SetDBConn
-Generated TestNewHsAuthApplication
-Generated Test_getHsAuthApplicationArgsStr
-Generated Test_getHsAuthApplicationArgsStrUpdate
-Generated TestHsAuthApplication_Select
-Generated TestHsAuthApplication_FindByID
-Generated TestHsAuthApplication_Add
-Generated TestHsAuthApplication_AddBatch
-Generated TestHsAuthApplication_Update
-Generated TestHsAuthApplication_UpdateBatch
-Generated TestHsAuthApplication_SDelete
-Generated TestHsAuthApplication_SDeleteBatch
-Generated TestHsAuthApplication_Delete
-Generated TestHsAuthApplication_DeleteBatch
-Generated TestHsAuthApplication_Exec
 package base
 
 import (
@@ -44,7 +26,7 @@ func TestHsAuthApplication_checkAddCache(t *testing.T) {
 		name   string
 		fields fields
 	}{
-	// TODO: Add test cases.
+		// TODO: Add test cases.
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -84,7 +66,7 @@ func TestHsAuthApplication_StartAddCache(t *testing.T) {
 		name   string
 		fields fields
 	}{
-	// TODO: Add test cases.
+		// TODO: Add test cases.
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -126,7 +108,7 @@ func TestHsAuthApplication_GetSql(t *testing.T) {
 		want   string
 		want1  []interface{}
 	}{
-	// TODO: Add test cases.
+		// TODO: Add test cases.
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -177,7 +159,7 @@ func TestHsAuthApplication_SetDBConn(t *testing.T) {
 		fields fields
 		args   args
 	}{
-	// TODO: Add test cases.
+		// TODO: Add test cases.
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -204,7 +186,7 @@ func TestNewHsAuthApplication(t *testing.T) {
 		name string
 		want HsAuthApplication
 	}{
-	// TODO: Add test cases.
+		// TODO: Add test cases.
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -224,7 +206,7 @@ func Test_getHsAuthApplicationArgsStr(t *testing.T) {
 		args args
 		want string
 	}{
-	// TODO: Add test cases.
+		// TODO: Add test cases.
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -240,7 +222,7 @@ func Test_getHsAuthApplicationArgsStrUpdate(t *testing.T) {
 		name string
 		want string
 	}{
-	// TODO: Add test cases.
+		// TODO: Add test cases.
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -278,7 +260,7 @@ func TestHsAuthApplication_Select(t *testing.T) {
 		want    []interface{}
 		wantErr bool
 	}{
-	// TODO: Add test cases.
+		// TODO: Add test cases.
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -331,7 +313,7 @@ func TestHsAuthApplication_FindByID(t *testing.T) {
 		want    interface{}
 		wantErr bool
 	}{
-	// TODO: Add test cases.
+		// TODO: Add test cases.
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -380,7 +362,7 @@ func TestHsAuthApplication_Add(t *testing.T) {
 		want    int64
 		wantErr bool
 	}{
-	// TODO: Add test cases.
+		// TODO: Add test cases.
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -432,7 +414,7 @@ func TestHsAuthApplication_AddBatch(t *testing.T) {
 		args    args
 		wantErr bool
 	}{
-	// TODO: Add test cases.
+		// TODO: Add test cases.
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -476,7 +458,7 @@ func TestHsAuthApplication_Update(t *testing.T) {
 		want    int64
 		wantErr bool
 	}{
-	// TODO: Add test cases.
+		// TODO: Add test cases.
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -528,7 +510,7 @@ func TestHsAuthApplication_UpdateBatch(t *testing.T) {
 		args    args
 		wantErr bool
 	}{
-	// TODO: Add test cases.
+		// TODO: Add test cases.
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -572,7 +554,7 @@ func TestHsAuthApplication_SDelete(t *testing.T) {
 		want    int64
 		wantErr bool
 	}{
-	// TODO: Add test cases.
+		// TODO: Add test cases.
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -624,7 +606,7 @@ func TestHsAuthApplication_SDeleteBatch(t *testing.T) {
 		args    args
 		wantErr bool
 	}{
-	// TODO: Add test cases.
+		// TODO: Add test cases.
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -668,7 +650,7 @@ func TestHsAuthApplication_Delete(t *testing.T) {
 		want    int64
 		wantErr bool
 	}{
-	// TODO: Add test cases.
+		// TODO: Add test cases.
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -720,7 +702,7 @@ func TestHsAuthApplication_DeleteBatch(t *testing.T) {
 		args    args
 		wantErr bool
 	}{
-	// TODO: Add test cases.
+		// TODO: Add test cases.
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -769,7 +751,7 @@ func TestHsAuthApplication_Exec(t *testing.T) {
 		want    int64
 		wantErr bool
 	}{
-	// TODO: Add test cases.
+		// TODO: Add test cases.
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

@@ -107,7 +107,7 @@ type instrumentingService struct {
 	requestCount   metrics.Counter
 	requestLatency metrics.Histogram
 
-	next ServerRoute
+	next {{{sname}}}
 }
 
 func NewInstrumentingService(counter metrics.Counter, latency metrics.Histogram, s {{{sname}}}) {{{sname}}} {
@@ -139,7 +139,7 @@ func NewInstrumentingService(counter metrics.Counter, latency metrics.Histogram,
 
 	type loggingService struct {
 		logger log.Logger
-		next   ServerRoute
+		next   {{{sname}}}
 	}
 
 	func NewLoggingService(logger log.Logger, s {{{sname}}}) {{{sname}}} {

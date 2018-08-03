@@ -46,7 +46,6 @@ func CmodelFile(c *cli.Context) error {
 	os.Mkdir(m_modelPath, os.ModePerm)
 	os.Mkdir(m_modelPath+m_base, os.ModePerm)
 
-	createBaseModel() //创建basemodel
 	//创建model
 	f, _ := os.Stat(file)
 	if f.IsDir() { //如果是目录
@@ -57,6 +56,8 @@ func CmodelFile(c *cli.Context) error {
 			if !f.IsDir() {
 				createModel(path)
 				createDAO(path)
+				createBaseModel(dorm.Keytype) //创建basemodel
+
 			}
 			return nil
 		})
@@ -105,8 +106,8 @@ func createDAO(file string) error {
 }
 
 //生成basemodel
-func createBaseModel() error {
-	Str := dorm.CreateModel(m_base)
+func createBaseModel(keytype string) error {
+	Str := dorm.CreateModel(m_base, keytype)
 	//生成文件
 	fileName := "model.go"
 	fPath := m_modelPath + m_base + "/"

@@ -1,68 +1,65 @@
-
 package base
-import (
- "database/sql"
- "log"
- "strconv"
- "fmt"
- "sync"
- "time"
-_ "github.com/go-sql-driver/mysql"
-_ "github.com/lib/pq"
-)
 
+import (
+	"database/sql"
+	"fmt"
+	_ "github.com/go-sql-driver/mysql"
+	_ "github.com/lib/pq"
+	"log"
+	"strconv"
+	"sync"
+	"time"
+)
 
 var (
-	sqlHsAuthApplication string
-	argsHsAuthApplication []interface{}
-	dbconnHsAuthApplication *sql.DB
-	driverHsAuthApplication string
-	addCacheHsAuthApplication []interface{} //添加缓存数组
-	countHsAuthApplication int              //计数 秒
-	addCacheFlagHsAuthApplication      = false //缓存进程是否启动
+	sqlHsAuthApplication          string
+	argsHsAuthApplication         []interface{}
+	dbconnHsAuthApplication       *sql.DB
+	driverHsAuthApplication       string
+	addCacheHsAuthApplication     []interface{} //添加缓存数组
+	countHsAuthApplication        int           //计数 秒
+	addCacheFlagHsAuthApplication = false       //缓存进程是否启动
 )
 
-type HsAuthApplication struct{
- 		Id int64  `dormCol:"id" dormMysqlType:"int(10)" dorm:"PRIMARY;unsigned;NOT NULL;AUTO_INCREMENT"`
- 		SecretKey string  `dormCol:"secret_key" dormMysqlType:"varchar(128)" dorm:"NOT NULL"`
- 		AppKey string  `dormCol:"app_key" dormMysqlType:"varchar(128)" dorm:"NOT NULL"`
- 		Name string  `dormCol:"name" dormMysqlType:"varchar(256)" dorm:"NOT NULL"`
- 		Ip string  `dormCol:"ip" dormMysqlType:"varchar(32)" dorm:"NOT NULL;DEFAULT ''"`
- 		Type int8  `dormCol:"type" dormMysqlType:"tinyint(4)" dorm:"NOT NULL;DEFAULT '0'"`
- 		Exp int64  `dormCol:"exp" dormMysqlType:"int(11)" dorm:"NOT NULL;DEFAULT '0'"`
- 		CreatedAt string  `dormCol:"created_at" dormMysqlType:"timestamp" dorm:"NOT NULL;DEFAULT CURRENT_TIMESTAMP"`
- 		UpdatedAt string  `dormCol:"updated_at" dormMysqlType:"timestamp" dorm:"NOT NULL;DEFAULT CURRENT_TIMESTAMP"`
- 		DeletedAt string  `dormCol:"deleted_at" dormMysqlType:"timestamp" dorm:"DEFAULT NULL"`
- 		StatusAt int8  `dormCol:"status_at" dormMysqlType:"tinyint(4)" dorm:"NOT NULL;DEFAULT '1'"`
-   }
+type HsAuthApplication struct {
+	Id        int64  `dormCol:"id" dormMysqlType:"int(10)" dorm:"PRIMARY;unsigned;NOT NULL;AUTO_INCREMENT"`
+	SecretKey string `dormCol:"secret_key" dormMysqlType:"varchar(128)" dorm:"NOT NULL"`
+	AppKey    string `dormCol:"app_key" dormMysqlType:"varchar(128)" dorm:"NOT NULL"`
+	Name      string `dormCol:"name" dormMysqlType:"varchar(256)" dorm:"NOT NULL"`
+	Ip        string `dormCol:"ip" dormMysqlType:"varchar(32)" dorm:"NOT NULL;DEFAULT ''"`
+	Type      int8   `dormCol:"type" dormMysqlType:"tinyint(4)" dorm:"NOT NULL;DEFAULT '0'"`
+	Exp       int64  `dormCol:"exp" dormMysqlType:"int(11)" dorm:"NOT NULL;DEFAULT '0'"`
+	CreatedAt string `dormCol:"created_at" dormMysqlType:"timestamp" dorm:"NOT NULL;DEFAULT CURRENT_TIMESTAMP"`
+	UpdatedAt string `dormCol:"updated_at" dormMysqlType:"timestamp" dorm:"NOT NULL;DEFAULT CURRENT_TIMESTAMP"`
+	DeletedAt string `dormCol:"deleted_at" dormMysqlType:"timestamp" dorm:"DEFAULT NULL"`
+	StatusAt  int8   `dormCol:"status_at" dormMysqlType:"tinyint(4)" dorm:"NOT NULL;DEFAULT '1'"`
+}
 
-	//检查增加缓存
-	func (hsAuthApplication HsAuthApplication) checkAddCache() {
-		for range time.Tick(1 * time.Second) {
-			if len(addCacheHsAuthApplication) >= AddCacheLen || countHsAuthApplication >= AddCacheExp {
-				err := hsAuthApplication.AddBatch(addCacheHsAuthApplication)
-				if err != nil {
-					fmt.Println(err)
-				}
-				countHsAuthApplication = 0
-				addCacheHsAuthApplication = make([]interface{}, 0)
+//检查增加缓存
+func (hsAuthApplication HsAuthApplication) checkAddCache() {
+	for range time.Tick(1 * time.Second) {
+		if len(addCacheHsAuthApplication) >= AddCacheLen || countHsAuthApplication >= AddCacheExp {
+			err := hsAuthApplication.AddBatch(addCacheHsAuthApplication)
+			if err != nil {
+				fmt.Println(err)
 			}
-			l := new(sync.RWMutex)
-			l.Lock()
-			countHsAuthApplication++
-			l.Unlock()
-		}
-	}
-
-
-
-	//开始添加缓存进程
-	func (hsAuthApplication HsAuthApplication) StartAddCache()  {
-		if UseAddCache {
+			countHsAuthApplication = 0
 			addCacheHsAuthApplication = make([]interface{}, 0)
-			go hsAuthApplication.checkAddCache()
 		}
+		l := new(sync.RWMutex)
+		l.Lock()
+		countHsAuthApplication++
+		l.Unlock()
 	}
+}
+
+//开始添加缓存进程
+func (hsAuthApplication HsAuthApplication) StartAddCache() {
+	if UseAddCache {
+		addCacheHsAuthApplication = make([]interface{}, 0)
+		go hsAuthApplication.checkAddCache()
+	}
+}
 
 //返回执行语句后sql，调试用
 func (hsAuthApplication HsAuthApplication) GetSql() (string, []interface{}) {
@@ -105,64 +102,61 @@ func NewHsAuthApplication() HsAuthApplication {
 	return hsAuthApplication
 }
 
-
-	//获得args字符串(除了update)
-	func getHsAuthApplicationArgsStr(num int) string {
-		var argsStr string
-		switch driverHsAuthApplication {
-		case "mysql":
-			for i := 0; i < num; i++ {
-				if argsStr == "" {
-					argsStr = "?"
-				} else {
-					argsStr = argsStr + ",?"
-				}
-			}
-		case "mariadb":
-			for i := 0; i < num; i++ {
-				if argsStr == "" {
-					argsStr = "?"
-				} else {
-					argsStr = argsStr + ",?"
-				}
-			}
-		case "cockroachDB":
-			for i := 0; i < num; i++ {
-				if argsStr == "" {
-					argsStr = "$" + strconv.Itoa(i+1)
-				} else {
-					argsStr = argsStr + ",$" + strconv.Itoa(i+1)
-				}
-			}
-		case "postgresql":
-			for i := 0; i < num; i++ {
-				if argsStr == "" {
-					argsStr = "$" + strconv.Itoa(i+1)
-				} else {
-					argsStr = argsStr + ",$" + strconv.Itoa(i+1)
-				}
+//获得args字符串(除了update)
+func getHsAuthApplicationArgsStr(num int) string {
+	var argsStr string
+	switch driverHsAuthApplication {
+	case "mysql":
+		for i := 0; i < num; i++ {
+			if argsStr == "" {
+				argsStr = "?"
+			} else {
+				argsStr = argsStr + ",?"
 			}
 		}
-		return argsStr
-	}
-
-	//获得args字符串(update)
-	func getHsAuthApplicationArgsStrUpdate() string {
-		var argsStr string
-		switch driverHsAuthApplication {
-		case "mysql":
-			argsStr = "secret_key=?,app_key=?,name=?,ip=?,type=?,exp=?,created_at=?,updated_at=?,deleted_at=?,status_at=? WHERE "  + SDELFLAG + "=0 and id=?"
-		case "mariadb":
-			argsStr = "secret_key=?,app_key=?,name=?,ip=?,type=?,exp=?,created_at=?,updated_at=?,deleted_at=?,status_at=? WHERE "  + SDELFLAG + "=0 and id=?"
-		case "cockroachDB":
-			argsStr = "secret_key=$1,app_key=$2,name=$3,ip=$4,type=$5,exp=$6,created_at=$7,updated_at=$8,deleted_at=$9,status_at=$10 WHERE "  + SDELFLAG + "=0 and id=$11"
-		case "postgresql":
-			argsStr = "secret_key=$1,app_key=$2,name=$3,ip=$4,type=$5,exp=$6,created_at=$7,updated_at=$8,deleted_at=$9,status_at=$10 WHERE "  + SDELFLAG + "=0 and id=$11"
+	case "mariadb":
+		for i := 0; i < num; i++ {
+			if argsStr == "" {
+				argsStr = "?"
+			} else {
+				argsStr = argsStr + ",?"
+			}
 		}
-		return argsStr
+	case "cockroachDB":
+		for i := 0; i < num; i++ {
+			if argsStr == "" {
+				argsStr = "$" + strconv.Itoa(i+1)
+			} else {
+				argsStr = argsStr + ",$" + strconv.Itoa(i+1)
+			}
+		}
+	case "postgresql":
+		for i := 0; i < num; i++ {
+			if argsStr == "" {
+				argsStr = "$" + strconv.Itoa(i+1)
+			} else {
+				argsStr = argsStr + ",$" + strconv.Itoa(i+1)
+			}
+		}
 	}
+	return argsStr
+}
 
-
+//获得args字符串(update)
+func getHsAuthApplicationArgsStrUpdate() string {
+	var argsStr string
+	switch driverHsAuthApplication {
+	case "mysql":
+		argsStr = "secret_key=?,app_key=?,name=?,ip=?,type=?,exp=?,created_at=?,updated_at=?,deleted_at=?,status_at=? WHERE " + SDELFLAG + "=0 and id=?"
+	case "mariadb":
+		argsStr = "secret_key=?,app_key=?,name=?,ip=?,type=?,exp=?,created_at=?,updated_at=?,deleted_at=?,status_at=? WHERE " + SDELFLAG + "=0 and id=?"
+	case "cockroachDB":
+		argsStr = "secret_key=$1,app_key=$2,name=$3,ip=$4,type=$5,exp=$6,created_at=$7,updated_at=$8,deleted_at=$9,status_at=$10 WHERE " + SDELFLAG + "=0 and id=$11"
+	case "postgresql":
+		argsStr = "secret_key=$1,app_key=$2,name=$3,ip=$4,type=$5,exp=$6,created_at=$7,updated_at=$8,deleted_at=$9,status_at=$10 WHERE " + SDELFLAG + "=0 and id=$11"
+	}
+	return argsStr
+}
 
 func (hsAuthApplication HsAuthApplication) Select(sql string, limit, offset int, value ...interface{}) ([]interface{}, error) {
 	for i := 0; i < len(Beforefun.Select); i++ { //前置hooks
@@ -174,7 +168,7 @@ func (hsAuthApplication HsAuthApplication) Select(sql string, limit, offset int,
 	}
 	ar := make([]interface{}, limit) //0为可变数组长度
 	// ar[0].(*HsAuthRecords)
-	sqlstr := "select id,secret_key,app_key,name,ip,type,exp,created_at,updated_at,deleted_at,status_at from hs_auth_application where "+ SDELFLAG + "=0 " + sql + " limit " + strconv.Itoa(limit) + " offset " + strconv.Itoa(offset)
+	sqlstr := "select id,secret_key,app_key,name,ip,type,exp,created_at,updated_at,deleted_at,status_at from hs_auth_application where " + SDELFLAG + "=0 " + sql + " limit " + strconv.Itoa(limit) + " offset " + strconv.Itoa(offset)
 
 	sqlHsAuthApplication = sqlstr
 	argsHsAuthApplication = value
@@ -203,17 +197,17 @@ func (hsAuthApplication HsAuthApplication) Select(sql string, limit, offset int,
 	}
 	columns, _ := rows.Columns()
 	values := make([]interface{}, len(columns))
-		values[0] = &hsAuthApplication.Id
-		values[1] = &hsAuthApplication.SecretKey
-		values[2] = &hsAuthApplication.AppKey
-		values[3] = &hsAuthApplication.Name
-		values[4] = &hsAuthApplication.Ip
-		values[5] = &hsAuthApplication.Type
-		values[6] = &hsAuthApplication.Exp
-		values[7] = &hsAuthApplication.CreatedAt
-		values[8] = &hsAuthApplication.UpdatedAt
-		values[9] = &hsAuthApplication.DeletedAt
-		values[10] = &hsAuthApplication.StatusAt
+	values[0] = &hsAuthApplication.Id
+	values[1] = &hsAuthApplication.SecretKey
+	values[2] = &hsAuthApplication.AppKey
+	values[3] = &hsAuthApplication.Name
+	values[4] = &hsAuthApplication.Ip
+	values[5] = &hsAuthApplication.Type
+	values[6] = &hsAuthApplication.Exp
+	values[7] = &hsAuthApplication.CreatedAt
+	values[8] = &hsAuthApplication.UpdatedAt
+	values[9] = &hsAuthApplication.DeletedAt
+	values[10] = &hsAuthApplication.StatusAt
 	num := 0
 	for rows.Next() {
 		if num >= MAXROWS && MAXROWS != -1 {
@@ -235,7 +229,6 @@ func (hsAuthApplication HsAuthApplication) Select(sql string, limit, offset int,
 	}
 	return ar, err
 }
-	
 
 func (hsAuthApplication *HsAuthApplication) FindByID(id int64) (interface{}, error) {
 	for i := 0; i < len(Beforefun.FindByID); i++ { //前置hooks
@@ -271,17 +264,17 @@ func (hsAuthApplication *HsAuthApplication) FindByID(id int64) (interface{}, err
 	}
 	columns, _ := rows.Columns()
 	values := make([]interface{}, len(columns))
-		values[0] = &hsAuthApplication.Id
-		values[1] = &hsAuthApplication.SecretKey
-		values[2] = &hsAuthApplication.AppKey
-		values[3] = &hsAuthApplication.Name
-		values[4] = &hsAuthApplication.Ip
-		values[5] = &hsAuthApplication.Type
-		values[6] = &hsAuthApplication.Exp
-		values[7] = &hsAuthApplication.CreatedAt
-		values[8] = &hsAuthApplication.UpdatedAt
-		values[9] = &hsAuthApplication.DeletedAt
-		values[10] = &hsAuthApplication.StatusAt
+	values[0] = &hsAuthApplication.Id
+	values[1] = &hsAuthApplication.SecretKey
+	values[2] = &hsAuthApplication.AppKey
+	values[3] = &hsAuthApplication.Name
+	values[4] = &hsAuthApplication.Ip
+	values[5] = &hsAuthApplication.Type
+	values[6] = &hsAuthApplication.Exp
+	values[7] = &hsAuthApplication.CreatedAt
+	values[8] = &hsAuthApplication.UpdatedAt
+	values[9] = &hsAuthApplication.DeletedAt
+	values[10] = &hsAuthApplication.StatusAt
 	if rows.Next() {
 		err = rows.Scan(values...)
 		Checkerr(err)
@@ -296,7 +289,6 @@ func (hsAuthApplication *HsAuthApplication) FindByID(id int64) (interface{}, err
 	}
 	return hsAuthApplication, err
 }
-	
 
 func (hsAuthApplication HsAuthApplication) Add() (int64, error) {
 	for i := 0; i < len(Beforefun.Add); i++ { //前置hooks
@@ -311,25 +303,24 @@ func (hsAuthApplication HsAuthApplication) Add() (int64, error) {
 	}
 	defer stmtIns.Close()
 	args := make([]interface{}, 10)
-		args[0]=&hsAuthApplication.SecretKey
-		args[1]=&hsAuthApplication.AppKey
-		args[2]=&hsAuthApplication.Name
-		args[3]=&hsAuthApplication.Ip
-		args[4]=&hsAuthApplication.Type
-		args[5]=&hsAuthApplication.Exp
-		args[6]=&hsAuthApplication.CreatedAt
-		args[7]=&hsAuthApplication.UpdatedAt
-		args[8]=&hsAuthApplication.DeletedAt
-		args[9]=&hsAuthApplication.StatusAt
-		
+	args[0] = &hsAuthApplication.SecretKey
+	args[1] = &hsAuthApplication.AppKey
+	args[2] = &hsAuthApplication.Name
+	args[3] = &hsAuthApplication.Ip
+	args[4] = &hsAuthApplication.Type
+	args[5] = &hsAuthApplication.Exp
+	args[6] = &hsAuthApplication.CreatedAt
+	args[7] = &hsAuthApplication.UpdatedAt
+	args[8] = &hsAuthApplication.DeletedAt
+	args[9] = &hsAuthApplication.StatusAt
+
 	sqlHsAuthApplication = sqlstr
 	argsHsAuthApplication = args
 
-
 	if UseAddCache {
-		if !addCacheFlagHsAuthApplication  {
+		if !addCacheFlagHsAuthApplication {
 			hsAuthApplication.StartAddCache()
-			addCacheFlagHsAuthApplication  = true
+			addCacheFlagHsAuthApplication = true
 		}
 		l := new(sync.RWMutex)
 		l.Lock()
@@ -352,7 +343,6 @@ func (hsAuthApplication HsAuthApplication) Add() (int64, error) {
 	}
 
 }
-	
 
 func (hsAuthApplication HsAuthApplication) AddBatch(obj []interface{}) error {
 	for i := 0; i < len(Beforefun.AddBatch); i++ { //前置hooks
@@ -362,12 +352,12 @@ func (hsAuthApplication HsAuthApplication) AddBatch(obj []interface{}) error {
 	sqlstr := "INSERT INTO hs_auth_application (secret_key,app_key,name,ip,type,exp,created_at,updated_at,deleted_at,status_at) VALUES (" + argsStr + ")"
 	tx, err := dbconnHsAuthApplication.Begin()
 	if err != nil {
-		return  err
+		return err
 	}
 	stmt, err := tx.Prepare(sqlstr)
 	defer stmt.Close()
 	if err != nil {
-		return  err
+		return err
 	}
 	args := make([]interface{}, 10)
 
@@ -376,25 +366,25 @@ func (hsAuthApplication HsAuthApplication) AddBatch(obj []interface{}) error {
 
 	for _, value := range obj {
 		v := value.(HsAuthApplication)
-	 		args[0]=v.SecretKey
-	 		args[1]=v.AppKey
-	 		args[2]=v.Name
-	 		args[3]=v.Ip
-	 		args[4]=v.Type
-	 		args[5]=v.Exp
-	 		args[6]=v.CreatedAt
-	 		args[7]=v.UpdatedAt
-	 		args[8]=v.DeletedAt
-	 		args[9]=v.StatusAt
-	 		
+		args[0] = v.SecretKey
+		args[1] = v.AppKey
+		args[2] = v.Name
+		args[3] = v.Ip
+		args[4] = v.Type
+		args[5] = v.Exp
+		args[6] = v.CreatedAt
+		args[7] = v.UpdatedAt
+		args[8] = v.DeletedAt
+		args[9] = v.StatusAt
+
 		_, err = stmt.Exec(args...)
 		if err != nil {
-			return  err
+			return err
 		}
 	}
 	err = tx.Commit()
 	if err != nil {
-		return  err
+		return err
 	}
 	for i := 0; i < len(Afterfun.AddBatch); i++ { //后置hooks
 		Afterfun.AddBatch[i]()
@@ -402,7 +392,6 @@ func (hsAuthApplication HsAuthApplication) AddBatch(obj []interface{}) error {
 
 	return err
 }
-
 
 func (hsAuthApplication *HsAuthApplication) Update() (int64, error) {
 	for i := 0; i < len(Beforefun.Update); i++ { //前置hooks
@@ -416,17 +405,17 @@ func (hsAuthApplication *HsAuthApplication) Update() (int64, error) {
 	}
 	defer stmtIns.Close()
 	args := make([]interface{}, 11)
-		args[0] = hsAuthApplication.SecretKey
-		args[1] = hsAuthApplication.AppKey
-		args[2] = hsAuthApplication.Name
-		args[3] = hsAuthApplication.Ip
-		args[4] = hsAuthApplication.Type
-		args[5] = hsAuthApplication.Exp
-		args[6] = hsAuthApplication.CreatedAt
-		args[7] = hsAuthApplication.UpdatedAt
-		args[8] = hsAuthApplication.DeletedAt
-		args[9] = hsAuthApplication.StatusAt
-		args[10]=&hsAuthApplication.Id
+	args[0] = hsAuthApplication.SecretKey
+	args[1] = hsAuthApplication.AppKey
+	args[2] = hsAuthApplication.Name
+	args[3] = hsAuthApplication.Ip
+	args[4] = hsAuthApplication.Type
+	args[5] = hsAuthApplication.Exp
+	args[6] = hsAuthApplication.CreatedAt
+	args[7] = hsAuthApplication.UpdatedAt
+	args[8] = hsAuthApplication.DeletedAt
+	args[9] = hsAuthApplication.StatusAt
+	args[10] = &hsAuthApplication.Id
 	sqlHsAuthApplication = sqlstr
 	argsHsAuthApplication = args
 	result, err := stmtIns.Exec(args...)
@@ -438,7 +427,6 @@ func (hsAuthApplication *HsAuthApplication) Update() (int64, error) {
 	}
 	return result.RowsAffected()
 }
-
 
 func (hsAuthApplication HsAuthApplication) UpdateBatch(obj []interface{}) error {
 	for i := 0; i < len(Beforefun.UpdateBatch); i++ { //前置hooks
@@ -459,17 +447,17 @@ func (hsAuthApplication HsAuthApplication) UpdateBatch(obj []interface{}) error 
 
 	for _, value := range obj {
 		v := value.(HsAuthApplication)
-	 		args[0] = v.SecretKey
-	 		args[1] = v.AppKey
-	 		args[2] = v.Name
-	 		args[3] = v.Ip
-	 		args[4] = v.Type
-	 		args[5] = v.Exp
-	 		args[6] = v.CreatedAt
-	 		args[7] = v.UpdatedAt
-	 		args[8] = v.DeletedAt
-	 		args[9] = v.StatusAt
-	 		args[10]=v.Id
+		args[0] = v.SecretKey
+		args[1] = v.AppKey
+		args[2] = v.Name
+		args[3] = v.Ip
+		args[4] = v.Type
+		args[5] = v.Exp
+		args[6] = v.CreatedAt
+		args[7] = v.UpdatedAt
+		args[8] = v.DeletedAt
+		args[9] = v.StatusAt
+		args[10] = v.Id
 		_, err = stmt.Exec(args...)
 		if err != nil {
 			return err
@@ -488,7 +476,6 @@ func (hsAuthApplication HsAuthApplication) UpdateBatch(obj []interface{}) error 
 	return err
 }
 
-
 func (hsAuthApplication HsAuthApplication) SDelete() (int64, error) {
 	hsAuthApplication.StatusAt = 1
 	return hsAuthApplication.Update()
@@ -503,13 +490,12 @@ func (hsAuthApplication HsAuthApplication) SDeleteBatch(obj []interface{}) error
 	return hsAuthApplication.UpdateBatch(obj)
 }
 
-
 func (hsAuthApplication HsAuthApplication) Delete() (int64, error) {
 	for i := 0; i < len(Beforefun.Delete); i++ { //前置hooks
 		Beforefun.Delete[i]()
 	}
 	argsStr := getHsAuthApplicationArgsStr(1)
-  sqlstr := "DELETE FROM hs_auth_application WHERE id = " + argsStr
+	sqlstr := "DELETE FROM hs_auth_application WHERE id = " + argsStr
 	stmt, err := dbconnHsAuthApplication.Prepare(sqlstr)
 	if err != nil {
 		return 0, err
@@ -527,7 +513,6 @@ func (hsAuthApplication HsAuthApplication) Delete() (int64, error) {
 	}
 	return result.RowsAffected()
 }
-
 
 func (hsAuthApplication HsAuthApplication) DeleteBatch(obj []interface{}) error {
 	for i := 0; i < len(Beforefun.DeleteBatch); i++ { //前置hooks
@@ -566,7 +551,6 @@ func (hsAuthApplication HsAuthApplication) DeleteBatch(obj []interface{}) error 
 	return err
 }
 
-
 func (hsAuthApplication HsAuthApplication) Exec(sql string, value ...interface{}) (int64, error) {
 	for i := 0; i < len(Beforefun.Exec); i++ { //前置hooks
 		Beforefun.Exec[i]()
@@ -590,4 +574,3 @@ func (hsAuthApplication HsAuthApplication) Exec(sql string, value ...interface{}
 	}
 	return result.RowsAffected()
 }
-

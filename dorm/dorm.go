@@ -14,6 +14,7 @@ var (
 	ut       = new(util.Dstring)
 	sl       = new(lexer.StructLexer)
 	baseName = "base"
+	Keytype  = "string" //主键类型默认string，用于basemodel
 )
 
 func CreateDorm(pkname, structStr string) string {
@@ -43,6 +44,7 @@ pkname 包名 如 ormstruct
 */
 func CreateDAO(location, pkname, structStr string) string {
 	obj := sl.StructName(structStr)
+	keytype := sl.FieldIndexKey(structStr) //获取主键类型
 	field := sl.FieldName(structStr)
 	objvar, err := ut.FUPer(obj)
 	fields := make([]string, len(field))
@@ -50,6 +52,7 @@ func CreateDAO(location, pkname, structStr string) string {
 		fields[i] = objvar + "." + v["field"] + " = dao." + v["field"]
 	}
 	ctx := map[string]interface{}{
+		"keytype":     keytype,
 		"obj":         obj,
 		"objvar":      objvar,
 		"pkname":      pkname,
@@ -62,10 +65,12 @@ func CreateDAO(location, pkname, structStr string) string {
 }
 func CreateSoftDeleteFun(structStr string) string {
 	obj := sl.StructName(structStr)
+	keytype := sl.FieldIndexKey(structStr) //获取主键类型
 	objvar, err := ut.FUPer(obj)
 	ctx := map[string]interface{}{
-		"obj":    obj,
-		"objvar": objvar,
+		"keytype": keytype,
+		"obj":     obj,
+		"objvar":  objvar,
 	}
 	str, err := raymond.Render(SDEL_TPL, ctx)
 	ut.Checkerr(err)
@@ -105,9 +110,11 @@ func CreateGetArgsStrFun(structStr string) string {
 	return str
 }
 
-func CreateModel(pkname string) string {
+func CreateModel(pkname string, kt string) string {
+	//keytype := sl.FieldIndexKey(structStr) //获取主键类型
 	ctx := map[string]interface{}{
-		"pkname": pkname,
+		"keytype": kt,
+		"pkname":  pkname,
 	}
 	str, err := raymond.Render(MODEL_TPL, ctx)
 	ut.Checkerr(err)
@@ -190,6 +197,7 @@ func CreateDeleteBatch(structStr string) string {
 
 func CreateDelete(structStr string) string {
 	obj := sl.StructName(structStr)
+	keytype := sl.FieldIndexKey(structStr) //获取主键类型
 	objvar, err := ut.FUPer(obj)
 	ut.Checkerr(err)
 	tableName := ut.CalToUnder(obj)
@@ -200,6 +208,7 @@ func CreateDelete(structStr string) string {
 		sqlField = ut.CalToUnder(field[0]["field"])
 	}
 	ctx := map[string]interface{}{
+		"keytype":     keytype,
 		"objvar":      objvar,
 		"obj":         obj,
 		"fields":      fields,
@@ -255,6 +264,7 @@ func CreateUpdateBatch(structStr string) string {
 
 func CreateUpdate(structStr string) string {
 	obj := sl.StructName(structStr)
+	keytype := sl.FieldIndexKey(structStr) //获取主键类型
 	objvar, err := ut.FUPer(obj)
 	ut.Checkerr(err)
 	tableName := ut.CalToUnder(obj)
@@ -282,6 +292,7 @@ func CreateUpdate(structStr string) string {
 	}
 
 	ctx := map[string]interface{}{
+		"keytype":   keytype,
 		"objvar":    objvar,
 		"obj":       obj,
 		"fields":    fields,
@@ -336,6 +347,13 @@ func CreateAddBatch(structStr string) string {
 
 func CreateAdd(structStr string) string {
 	obj := sl.StructName(structStr)
+	keytype := sl.FieldIndexKey(structStr) //获取主键类型
+	retstr := "return 0, err"
+	retIDstr := "return result.LastInsertId()"
+	if keytype == "string" {
+		retstr = "return \"\", err"
+		retIDstr = "return \"\", err"
+	}
 	objvar, err := ut.FUPer(obj)
 	ut.Checkerr(err)
 	tableName := ut.CalToUnder(obj)
@@ -357,6 +375,9 @@ func CreateAdd(structStr string) string {
 
 	}
 	ctx := map[string]interface{}{
+		"retIDstr":  retIDstr, //返回添加成功后id
+		"retstr":    retstr,   //错误时的返回
+		"keytype":   keytype,
 		"objvar":    objvar,
 		"obj":       obj,
 		"fields":    fields,
@@ -372,6 +393,8 @@ func CreateAdd(structStr string) string {
 
 func CreateFindByID(structStr string) string {
 	obj := sl.StructName(structStr)
+	keytype := sl.FieldIndexKey(structStr) //获取主键类型
+	Keytype = keytype                      //赋值全局主键类型
 	objvar, err := ut.FUPer(obj)
 	ut.Checkerr(err)
 	tableName := ut.CalToUnder(obj)
@@ -380,7 +403,6 @@ func CreateFindByID(structStr string) string {
 	if len(field) > 0 {
 		sqlField = ut.CalToUnder(field[0]["field"])
 	}
-
 	values := make([]string, len(field))
 	for i, v := range field {
 
@@ -393,6 +415,7 @@ func CreateFindByID(structStr string) string {
 		}
 	}
 	ctx := map[string]interface{}{
+		"keytype":   keytype,
 		"objvar":    objvar,
 		"obj":       obj,
 		"fields":    fields,

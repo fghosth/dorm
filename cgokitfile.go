@@ -287,7 +287,7 @@ func createInstrument() error {
 		str := `
 			func (s *instrumentingService) ` + v.FunName + v.Args + v.Returns + ` {
 				defer func(begin time.Time) {
-					s.requestCount.With("method", "Insert").Add(1)
+					s.requestCount.With("method", "` + v.FunName + `").Add(1)
 					s.requestLatency.With("method", "` + v.FunName + `").Observe(time.Since(begin).Seconds())
 				}(time.Now())
 				return s.next.` + v.FunName + lexer.GetFunFields(v.Args) + `

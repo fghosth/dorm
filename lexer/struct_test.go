@@ -1,7 +1,9 @@
 package lexer_test
 
 import (
+	"fmt"
 	"jvole.com/createProject/lexer"
+	"testing"
 )
 
 var (
@@ -37,3 +39,12 @@ var (
 // 		}
 // 	}
 // }
+
+func TestFieldIndexKey(t *testing.T) {
+	fileStr := sl.GetStructFile("../ormstruct/resource_action.go")
+	slist := sl.StructStr(fileStr)
+	for _, v := range slist {
+		str := sl.FieldIndexKey(v)
+		fmt.Println(str)
+	}
+}
