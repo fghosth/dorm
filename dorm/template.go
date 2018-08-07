@@ -301,7 +301,11 @@ func ({{{objvar}}} {{{obj}}}) Delete() (int64, error) {
 	for i := 0; i < len(Afterfun.Delete); i++ { //后置hooks
 		Afterfun.Delete[i]()
 	}
-	return result.RowsAffected()
+	if result == nil {
+		return 0, nil
+	} else {
+		return result.RowsAffected()
+	}
 }
 `
 	DeleteBatch_TPL = `
@@ -693,8 +697,7 @@ import (
 	"fmt"
 	"log"
 	"time"
-	"jvole.com/algo-go/gcache"
-	"jvole.com/createProject/util"
+	"github.com/fghosth/algo-go/gcache"
 )
 
 const (
@@ -717,10 +720,10 @@ var (
 	useCache  = true  //是否使用缓存
 	cacheType = "ARC" //缓存类型:LRU,LFU,ARC
 	cache     gcache.Cache
-	UseAddCache = true           //是否使用插入缓存 如每2秒写一次数据库，或者超过300条写一次数据库
+	UseAddCache = false           //是否使用插入缓存 如每2秒写一次数据库，或者超过300条写一次数据库
 	AddCacheLen = 300            //插入缓存数量
 	AddCacheExp = 3              //插入缓存过期时间 秒
-	UT        = util.Dstring{} //工具类
+	UT        = Dstring{} //工具类
 )
 
 //设置缓存类型
@@ -789,7 +792,7 @@ func GetCache(k interface{}) (interface{}, error) {
 func init() {
 	SetCacheType(cacheType, cacheLen)
 	// SetConn("mysql", "root:@tcp(localhost:3306)/praise_auth?charset=utf8")
-	SetConn("cockroachDB", "postgresql://derek:123456@localhost:26257/auth?sslmode=disable")
+	SetConn("cockroachDB", "postgresql://root@alcockroach1:26257/uuabc?sslmode=disable")
 }
 
 /*
@@ -1003,5 +1006,46 @@ func AddAfterFun(f func(), w string) bool {
 	return success
 }
 
+`
+	UTIL_TMP = `
+package base
+
+import (
+	"crypto/md5"
+	"encoding/hex"
+	"strconv"
+)
+
+type Dstring struct {
+}
+
+//对象数组转化为义某分隔符合并的字符串
+func (ds *Dstring) JoinInterface(obj []interface{}, seq string) string {
+	var str, tmp string
+	for i := 0; i < len(obj); i++ {
+		b, ok := obj[i].(int)
+		if ok {
+			tmp = strconv.Itoa(b)
+		}
+		c, ok := obj[i].(string)
+		if ok {
+			tmp = c
+		}
+		if str == "" {
+			str = tmp
+		} else {
+			str = str + seq + tmp
+		}
+	}
+	return str
+}
+
+//md5加密
+func (ds *Dstring) Md5Str(str string) string {
+	md5Ctx := md5.New()
+	md5Ctx.Write([]byte(str))
+	cipherStr := md5Ctx.Sum(nil)
+	return hex.EncodeToString(cipherStr)
+}
 `
 )

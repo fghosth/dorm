@@ -57,7 +57,7 @@ func CmodelFile(c *cli.Context) error {
 				createModel(path)
 				createDAO(path)
 				createBaseModel(dorm.Keytype) //创建basemodel
-
+				createdUtil()
 			}
 			return nil
 		})
@@ -110,6 +110,34 @@ func createBaseModel(keytype string) error {
 	Str := dorm.CreateModel(m_base, keytype)
 	//生成文件
 	fileName := "model.go"
+	fPath := m_modelPath + m_base + "/"
+	exist, err := ut.FileOrPathExists(fPath + fileName)
+	if !COVRE && exist {
+		fmt.Println(util.Red(fPath + fileName + "文件已存在"))
+		return err
+	}
+	sf, err := os.Create(fPath + fileName)
+	if err != nil {
+		fmt.Println(err)
+		return err
+	}
+	_, err = sf.Write([]byte(Str))
+	if err != nil {
+		fmt.Println(err)
+		return err
+	}
+	// pp.Println(err)
+	if !(!COVRE && exist) && err == nil {
+		fmt.Println(fPath + fileName + "生成成功")
+	}
+	return nil
+}
+
+//生成base下util
+func createdUtil() error {
+	Str := dorm.CreateUtil()
+	//生成文件
+	fileName := "util.go"
 	fPath := m_modelPath + m_base + "/"
 	exist, err := ut.FileOrPathExists(fPath + fileName)
 	if !COVRE && exist {

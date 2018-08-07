@@ -120,6 +120,15 @@ func CreateModel(pkname string, kt string) string {
 	ut.Checkerr(err)
 	return str
 }
+
+func CreateUtil() string {
+	//keytype := sl.FieldIndexKey(structStr) //获取主键类型
+	ctx := map[string]interface{}{}
+	str, err := raymond.Render(UTIL_TMP, ctx)
+	ut.Checkerr(err)
+	return str
+}
+
 func CreateField(structStr string) string {
 	obj := sl.StructName(structStr)
 
@@ -313,22 +322,34 @@ func CreateAddBatch(structStr string) string {
 	tableName := ut.CalToUnder(obj)
 	field := sl.FieldName(structStr)
 	var fields, parms, cockroachParms string
-	length := len(field) - 1
+	length := len(field) //字段数量
 	values := make([]string, len(field))
+	//for i, v := range field {
+	//	if i > 0 { //去除id
+	//		values[i-1] = "args[" + strconv.Itoa(i-1) + "]=v." + v["field"]
+	//		if fields == "" {
+	//			parms = "?"
+	//			cockroachParms = "$" + strconv.Itoa(i)
+	//			fields = ut.CalToUnder(v["field"])
+	//		} else {
+	//			parms = parms + ",?"
+	//			cockroachParms = cockroachParms + ",$" + strconv.Itoa(i)
+	//			fields = fields + "," + ut.CalToUnder(v["field"])
+	//		}
+	//	}
+	//
+	//}
 	for i, v := range field {
-		if i > 0 { //去除id
-			values[i-1] = "args[" + strconv.Itoa(i-1) + "]=v." + v["field"]
-			if fields == "" {
-				parms = "?"
-				cockroachParms = "$" + strconv.Itoa(i)
-				fields = ut.CalToUnder(v["field"])
-			} else {
-				parms = parms + ",?"
-				cockroachParms = cockroachParms + ",$" + strconv.Itoa(i)
-				fields = fields + "," + ut.CalToUnder(v["field"])
-			}
+		values[i] = "args[" + strconv.Itoa(i) + "]=v." + v["field"]
+		if fields == "" {
+			parms = "?"
+			cockroachParms = "$" + strconv.Itoa(i)
+			fields = ut.CalToUnder(v["field"])
+		} else {
+			parms = parms + ",?"
+			cockroachParms = cockroachParms + ",$" + strconv.Itoa(i)
+			fields = fields + "," + ut.CalToUnder(v["field"])
 		}
-
 	}
 	ctx := map[string]interface{}{
 		"objvar":         objvar,
@@ -359,20 +380,30 @@ func CreateAdd(structStr string) string {
 	tableName := ut.CalToUnder(obj)
 	field := sl.FieldName(structStr)
 	var fields, parms string
-	length := len(field) - 1
+	length := len(field) //字段数量
 	values := make([]string, len(field))
+	//for i, v := range field {
+	//	if i > 0 { //去除id
+	//		values[i-1] = "args[" + strconv.Itoa(i-1) + "]=&" + objvar + "." + v["field"]
+	//		if fields == "" {
+	//			parms = "?"
+	//			fields = ut.CalToUnder(v["field"])
+	//		} else {
+	//			parms = parms + ",?"
+	//			fields = fields + "," + ut.CalToUnder(v["field"])
+	//		}
+	//	}
+	//
+	//}
 	for i, v := range field {
-		if i > 0 { //去除id
-			values[i-1] = "args[" + strconv.Itoa(i-1) + "]=&" + objvar + "." + v["field"]
-			if fields == "" {
-				parms = "?"
-				fields = ut.CalToUnder(v["field"])
-			} else {
-				parms = parms + ",?"
-				fields = fields + "," + ut.CalToUnder(v["field"])
-			}
+		values[i] = "args[" + strconv.Itoa(i) + "]=&" + objvar + "." + v["field"]
+		if fields == "" {
+			parms = "?"
+			fields = ut.CalToUnder(v["field"])
+		} else {
+			parms = parms + ",?"
+			fields = fields + "," + ut.CalToUnder(v["field"])
 		}
-
 	}
 	ctx := map[string]interface{}{
 		"retIDstr":  retIDstr, //返回添加成功后id

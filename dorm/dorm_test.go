@@ -10,7 +10,7 @@ import (
 )
 
 var ut = new(util.Dstring)
-var file = "../genstruct/hs_auth_application.go"
+var file = "../ormstruct/resource_action.go"
 
 func init() {
 
@@ -140,25 +140,25 @@ func TestCreateDorm(t *testing.T) {
 // 	}
 // }
 
-// func TestCreateAddBatch(t *testing.T) {
-// 	sl := new(lexer.StructLexer)
-// 	fileStr := sl.GetStructFile(file)
-// 	arrStruct := sl.StructStr(fileStr)
-// 	for _, v := range arrStruct {
-// 		Str := dorm.CreateAddBatch(v)
-// 		fmt.Println(Str)
-// 	}
-// }
+func TestCreateAddBatch(t *testing.T) {
+	sl := new(lexer.StructLexer)
+	fileStr := sl.GetStructFile(file)
+	arrStruct := sl.StructStr(fileStr)
+	for _, v := range arrStruct {
+		Str := dorm.CreateAddBatch(v)
+		fmt.Println(Str)
+	}
+}
 
-// func TestCreateAdd(t *testing.T) {
-// 	sl := new(lexer.StructLexer)
-// 	fileStr := sl.GetStructFile(file)
-// 	arrStruct := sl.StructStr(fileStr)
-// 	for _, v := range arrStruct {
-// 		Str := dorm.CreateAdd(v)
-// 		fmt.Println(Str)
-// 	}
-// }
+func TestCreateAdd(t *testing.T) {
+	sl := new(lexer.StructLexer)
+	fileStr := sl.GetStructFile(file)
+	arrStruct := sl.StructStr(fileStr)
+	for _, v := range arrStruct {
+		Str := dorm.CreateAdd(v)
+		fmt.Println(Str)
+	}
+}
 
 // func TestCreateFindByID(t *testing.T) {
 // 	sl := new(lexer.StructLexer)
@@ -179,3 +179,7 @@ func TestCreateDorm(t *testing.T) {
 // 		fmt.Println(Str)
 // 	}
 // }
+func TestCreateUtil(t *testing.T) {
+	str := dorm.CreateUtil()
+	fmt.Println(str)
+}
