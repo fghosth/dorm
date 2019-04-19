@@ -190,7 +190,7 @@ func ({{{objvar}}} {{{obj}}}) AddBatch(obj []interface{}) error {
 	args{{{obj}}} = args
 
 	for _, value := range obj {
-		v := value.({{{obj}}})
+		if v,ok := value.({{{obj}}});ok {
 		{{#each field}}
 	 		{{{this}}}
 		{{/each}}
@@ -198,6 +198,7 @@ func ({{{objvar}}} {{{obj}}}) AddBatch(obj []interface{}) error {
 		if err != nil {
 			return  err
 		}
+      }
 	}
 	err = tx.Commit()
 	if err != nil {
@@ -257,7 +258,7 @@ func ({{{objvar}}} {{{obj}}}) UpdateBatch(obj []interface{}) error {
 	args := make([]interface{}, {{{len}}})
 
 	for _, value := range obj {
-		v := value.({{{obj}}})
+		if v,ok := value.({{{obj}}});ok {
 		{{#each field}}
 	 		{{{this}}}
 		{{/each}}
@@ -265,6 +266,7 @@ func ({{{objvar}}} {{{obj}}}) UpdateBatch(obj []interface{}) error {
 		if err != nil {
 			return err
 		}
+      }
 	}
 	sql{{{obj}}} = sqlstr
 	args{{{obj}}} = args
@@ -327,12 +329,13 @@ func ({{{objvar}}} {{{obj}}}) DeleteBatch(obj []interface{}) error {
 	args := make([]interface{}, 1)
 
 	for _, value := range obj {
-		v := value.({{{obj}}})
+		if v,ok := value.({{{obj}}});ok {
 		args[0] = v.{{{structField}}}
 		_, err = stmt.Exec(args...)
 		if err != nil {
 			return err
 		}
+      }
 	}
 	sql{{{obj}}} = sqlstr
 	args{{{obj}}} = args
@@ -789,10 +792,11 @@ func GetCache(k interface{}) (interface{}, error) {
 	return cache.Get(k)
 }
 
-func init() {
+func Init(url string) {
 	SetCacheType(cacheType, cacheLen)
 	// SetConn("mysql", "root:@tcp(localhost:3306)/praise_auth?charset=utf8")
-	SetConn("cockroachDB", "postgresql://root@alcockroach1:26257/uuabc?sslmode=disable")
+	//SetConn("cockroachDB", "postgresql://root@alcockroach1:26257/uuabc?sslmode=disable")
+	SetConn("cockroachDB", url)
 }
 
 /*

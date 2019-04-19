@@ -80,7 +80,7 @@ func (ds *Dstring) ContainStrBysplit(s, chars, sep string) bool {
 
 //驼峰命名转下划线命名法
 func (ds *Dstring) CalToUnder(str string) string {
-	regstr := `[A-Z][a-z0-9]+` //所有大写字母开头的词
+	regstr := `[A-Z][a-z0-9]{0,}` //所有大写字母开头的词
 	tmpstr := ""
 	r := regexp.MustCompile(regstr)
 	words := r.FindAllString(str, -1)
