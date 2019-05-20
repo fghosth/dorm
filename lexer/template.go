@@ -3,11 +3,7 @@ package lexer
 const (
 	STRUCT_TMP = `package {{{packageName}}}
 
-   import (
-   	"database/sql"
-   	"fmt"
-   	_ "github.com/go-sql-driver/mysql"
-   )
+   
    type {{{name}}} struct{
      {{#each field}}
  		{{{this}}}

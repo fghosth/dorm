@@ -12,7 +12,7 @@ import (
 
 var (
 	//匹配所有mysql变量 匹配完整单词 解决 同时出现datetime 和date的问题
-	cockDBsqlType = `(?i)\b(JSON|INT|INTEGER|INT8|INT64|BIGINT|INT4|INT2|SMALLINT|BIT|UUID|SERIAL|SMALLSERIAL|BIGSERIAL|DECIMAL|DEC|NUMERIC|FLOAT|DOUBLE PRECISION|FLOAT8|BOOLEAN|BOOL|DATE|TIMESTAMPTZ|TIMESTAMP|INTERVAL|STRING|CHARACTER|CHAR|VARCHAR|TEXT|COLLATE|BYTES|BYTEA|BLOB|ARRAY)\b\(.+?\)|\b(JSON|INT|INTEGER|INT8|INT64|BIGINT|INT4|INT2|SMALLINT|BIT|UUID|SERIAL|SMALLSERIAL|BIGSERIAL|DECIMAL|DEC|NUMERIC|FLOAT|DOUBLE PRECISION|FLOAT8|BOOLEAN|BOOL|DATE|TIMESTAMPTZ|TIMESTAMP|INTERVAL|STRING|CHARACTER|CHAR|VARCHAR|TEXT|COLLATE|BYTES|BYTEA|BLOB|ARRAY)\b`
+	cockDBsqlType = `(?i)\b(JSONB|INT|INTEGER|INT8|INT64|BIGINT|INT4|INT2|SMALLINT|BIT|UUID|SERIAL|SMALLSERIAL|BIGSERIAL|DECIMAL|DEC|NUMERIC|FLOAT|DOUBLE PRECISION|FLOAT8|BOOLEAN|BOOL|DATE|TIMESTAMPTZ|TIMESTAMP|INTERVAL|STRING|CHARACTER|CHAR|VARCHAR|TEXT|COLLATE|BYTES|BYTEA|BLOB|ARRAY)\b\(.+?\)|\b(JSONB|INT|INTEGER|INT8|INT64|BIGINT|INT4|INT2|SMALLINT|BIT|UUID|SERIAL|SMALLSERIAL|BIGSERIAL|DECIMAL|DEC|NUMERIC|FLOAT|DOUBLE PRECISION|FLOAT8|BOOLEAN|BOOL|DATE|TIMESTAMPTZ|TIMESTAMP|INTERVAL|STRING|CHARACTER|CHAR|VARCHAR|TEXT|COLLATE|BYTES|BYTEA|BLOB|ARRAY)\b`
 	// tableName = "(?<=TABLE[\\s]{1,200}`).{1,}(?=`)"
 	//获取tablename所在行(?i)忽略大小写
 	cockDBtableNameLine = "(?i)CREATE TABLE.+\\("
@@ -45,18 +45,18 @@ var (
 		"bool":    "BOOL",
 	}
 	CockdbToStructMap = map[string]string{
-		"INT":              "int64",
-		"INTEGER":          "int64",
-		"INT8":             "int64",
-		"INT64":            "int64",
-		"BIGINT":           "int64",
+		"INT":              "int",
+		"INTEGER":          "int",
+		"INT8":             "int",
+		"INT64":            "int",
+		"BIGINT":           "int",
 		"INT4":             "int32",
 		"INT2":             "int16",
 		"BIT":              "int8",
 		"UUID":             "string",
-		"SERIAL":           "int64",
-		"SMALLSERIAL":      "int64",
-		"BIGSERIAL":        "int64",
+		"SERIAL":           "int",
+		"SMALLSERIAL":      "int",
+		"BIGSERIAL":        "int",
 		"DECIMAL":          "float64",
 		"DEC":              "float64",
 		"NUMERIC":          "float64",
@@ -68,8 +68,8 @@ var (
 		"BOOLEAN":          "bool",
 		"BOOL":             "bool",
 		"DATE":             "string",
-		"TIMESTAMP":        "string",
-		"TIMESTAMPTZ":      "string",
+		"TIMESTAMP":        "time.Time",
+		"TIMESTAMPTZ":      "time.Time",
 		"INTERVAL":         "int",
 		"TEXT":             "string",
 		"VARCHAR":          "string",
@@ -80,8 +80,8 @@ var (
 		"BLOB":             "[]byte",
 		"BYTEA":            "[]byte",
 		"BYTES":            "[]byte",
-		"ARRAY":            "string",
-		"JSON":             "string",
+		"ARRAY":            "[]string",
+		"JSONB":             "string",
 	}
 )
 
