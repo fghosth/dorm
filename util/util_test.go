@@ -1,14 +1,14 @@
 package util
 
 import (
-	"testing"
 	"fmt"
+	"testing"
 )
 
 func TestDstring_UnderToCal(t *testing.T) {
-	ds:=new(Dstring)
+	ds := new(Dstring)
 	str := "GUsername"
-	res:=ds.CalToUnder(str)
+	res := ds.CalToUnder(str)
 	fmt.Println(res)
 
 }

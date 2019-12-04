@@ -10,7 +10,8 @@ import (
 )
 
 var ut = new(util.Dstring)
-var file = "../ormstruct/resource_action.go"
+var file = "../ormstruct/reports.go"
+//var file = "../ormstruct/resource_action.go"
 
 func init() {
 
@@ -32,15 +33,15 @@ func TestCreateDorm(t *testing.T) {
 	}
 }
 
-// func TestCreateDAO(t *testing.T) {
-// 	sl := new(lexer.StructLexer)
-// 	fileStr := sl.GetStructFile(file)
-// 	arrStruct := sl.StructStr(fileStr)
-// 	for _, v := range arrStruct {
-// 		Str := dorm.CreateDAO("jvole.com/createProject/", "ormstruct", v)
-// 		fmt.Println(Str)
-// 	}
-// }
+//func TestCreateDAO(t *testing.T) {
+//	sl := new(lexer.StructLexer)
+//	fileStr := sl.GetStructFile(file)
+//	arrStruct := sl.StructStr(fileStr)
+//	for _, v := range arrStruct {
+//		Str := dorm.CreateDAO("jvole.com/createProject/", "ormstruct", v)
+//		fmt.Println(Str)
+//	}
+//}
 
 // func TestCreateSofeDelFun(t *testing.T) {
 // 	sl := new(lexer.StructLexer)
@@ -62,15 +63,15 @@ func TestCreateDorm(t *testing.T) {
 // 	}
 // }
 
-// func TestCreateField(t *testing.T) {
-// 	sl := new(lexer.StructLexer)
-// 	fileStr := sl.GetStructFile(file)
-// 	arrStruct := sl.StructStr(fileStr)
-// 	for _, v := range arrStruct {
-// 		Str := dorm.CreateField(v)
-// 		fmt.Println(Str)
-// 	}
-// }
+//func TestCreateField(t *testing.T) {
+//	sl := new(lexer.StructLexer)
+//	fileStr := sl.GetStructFile(file)
+//	arrStruct := sl.StructStr(fileStr)
+//	for _, v := range arrStruct {
+//		Str := dorm.CreateField(v)
+//		fmt.Println(Str)
+//	}
+//}
 
 // func TestCreateHeader(t *testing.T) {
 //

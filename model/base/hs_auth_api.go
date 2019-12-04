@@ -1,65 +1,62 @@
-
 package base
-import (
- "database/sql"
- "log"
- "strconv"
- "fmt"
- "sync"
- "time"
-_ "github.com/go-sql-driver/mysql"
-_ "github.com/lib/pq"
-)
 
+import (
+	"database/sql"
+	"fmt"
+	_ "github.com/go-sql-driver/mysql"
+	_ "github.com/lib/pq"
+	"log"
+	"strconv"
+	"sync"
+	"time"
+)
 
 var (
-	sqlHsAuthApi string
-	argsHsAuthApi []interface{}
-	dbconnHsAuthApi *sql.DB
-	driverHsAuthApi string
-	addCacheHsAuthApi []interface{} //添加缓存数组
-	countHsAuthApi int              //计数 秒
-	addCacheFlagHsAuthApi      = false //缓存进程是否启动
+	sqlHsAuthApi          string
+	argsHsAuthApi         []interface{}
+	dbconnHsAuthApi       *sql.DB
+	driverHsAuthApi       string
+	addCacheHsAuthApi     []interface{} //添加缓存数组
+	countHsAuthApi        int           //计数 秒
+	addCacheFlagHsAuthApi = false       //缓存进程是否启动
 )
 
-type HsAuthApi struct{
- 		Id int64  `dormCol:"id" dormMysqlType:"int(10)" dorm:"PRIMARY;unsigned;NOT NULL;AUTO_INCREMENT"`
- 		ApiKey string  `dormCol:"api_key" dormMysqlType:"varchar(128)" dorm:"NOT NULL"`
- 		Name string  `dormCol:"name" dormMysqlType:"varchar(256)" dorm:"NOT NULL"`
- 		Type int8  `dormCol:"type" dormMysqlType:"tinyint(4)" dorm:"NOT NULL;DEFAULT '0'"`
- 		CreatedAt string  `dormCol:"created_at" dormMysqlType:"timestamp" dorm:"NOT NULL;DEFAULT CURRENT_TIMESTAMP"`
- 		UpdatedAt string  `dormCol:"updated_at" dormMysqlType:"timestamp" dorm:"NOT NULL;DEFAULT CURRENT_TIMESTAMP"`
- 		DeletedAt string  `dormCol:"deleted_at" dormMysqlType:"timestamp" dorm:"DEFAULT NULL"`
- 		StatusAt int8  `dormCol:"status_at" dormMysqlType:"tinyint(4)" dorm:"NOT NULL;DEFAULT '1'"`
-   }
+type HsAuthApi struct {
+	Id        int64  `dormCol:"id" dormMysqlType:"int(10)" dorm:"PRIMARY;unsigned;NOT NULL;AUTO_INCREMENT"`
+	ApiKey    string `dormCol:"api_key" dormMysqlType:"varchar(128)" dorm:"NOT NULL"`
+	Name      string `dormCol:"name" dormMysqlType:"varchar(256)" dorm:"NOT NULL"`
+	Type      int8   `dormCol:"type" dormMysqlType:"tinyint(4)" dorm:"NOT NULL;DEFAULT '0'"`
+	CreatedAt string `dormCol:"created_at" dormMysqlType:"timestamp" dorm:"NOT NULL;DEFAULT CURRENT_TIMESTAMP"`
+	UpdatedAt string `dormCol:"updated_at" dormMysqlType:"timestamp" dorm:"NOT NULL;DEFAULT CURRENT_TIMESTAMP"`
+	DeletedAt string `dormCol:"deleted_at" dormMysqlType:"timestamp" dorm:"DEFAULT NULL"`
+	StatusAt  int8   `dormCol:"status_at" dormMysqlType:"tinyint(4)" dorm:"NOT NULL;DEFAULT '1'"`
+}
 
-	//检查增加缓存
-	func (hsAuthApi HsAuthApi) checkAddCache() {
-		for range time.Tick(1 * time.Second) {
-			if len(addCacheHsAuthApi) >= AddCacheLen || countHsAuthApi >= AddCacheExp {
-				err := hsAuthApi.AddBatch(addCacheHsAuthApi)
-				if err != nil {
-					fmt.Println(err)
-				}
-				countHsAuthApi = 0
-				addCacheHsAuthApi = make([]interface{}, 0)
+//检查增加缓存
+func (hsAuthApi HsAuthApi) checkAddCache() {
+	for range time.Tick(1 * time.Second) {
+		if len(addCacheHsAuthApi) >= AddCacheLen || countHsAuthApi >= AddCacheExp {
+			err := hsAuthApi.AddBatch(addCacheHsAuthApi)
+			if err != nil {
+				fmt.Println(err)
 			}
-			l := new(sync.RWMutex)
-			l.Lock()
-			countHsAuthApi++
-			l.Unlock()
-		}
-	}
-
-
-
-	//开始添加缓存进程
-	func (hsAuthApi HsAuthApi) StartAddCache()  {
-		if UseAddCache {
+			countHsAuthApi = 0
 			addCacheHsAuthApi = make([]interface{}, 0)
-			go hsAuthApi.checkAddCache()
 		}
+		l := new(sync.RWMutex)
+		l.Lock()
+		countHsAuthApi++
+		l.Unlock()
 	}
+}
+
+//开始添加缓存进程
+func (hsAuthApi HsAuthApi) StartAddCache() {
+	if UseAddCache {
+		addCacheHsAuthApi = make([]interface{}, 0)
+		go hsAuthApi.checkAddCache()
+	}
+}
 
 //返回执行语句后sql，调试用
 func (hsAuthApi HsAuthApi) GetSql() (string, []interface{}) {
@@ -102,64 +99,61 @@ func NewHsAuthApi() HsAuthApi {
 	return hsAuthApi
 }
 
-
-	//获得args字符串(除了update)
-	func getHsAuthApiArgsStr(num int) string {
-		var argsStr string
-		switch driverHsAuthApplication {
-		case "mysql":
-			for i := 0; i < num; i++ {
-				if argsStr == "" {
-					argsStr = "?"
-				} else {
-					argsStr = argsStr + ",?"
-				}
-			}
-		case "mariadb":
-			for i := 0; i < num; i++ {
-				if argsStr == "" {
-					argsStr = "?"
-				} else {
-					argsStr = argsStr + ",?"
-				}
-			}
-		case "cockroachDB":
-			for i := 0; i < num; i++ {
-				if argsStr == "" {
-					argsStr = "$" + strconv.Itoa(i+1)
-				} else {
-					argsStr = argsStr + ",$" + strconv.Itoa(i+1)
-				}
-			}
-		case "postgresql":
-			for i := 0; i < num; i++ {
-				if argsStr == "" {
-					argsStr = "$" + strconv.Itoa(i+1)
-				} else {
-					argsStr = argsStr + ",$" + strconv.Itoa(i+1)
-				}
+//获得args字符串(除了update)
+func getHsAuthApiArgsStr(num int) string {
+	var argsStr string
+	switch driverHsAuthApplication {
+	case "mysql":
+		for i := 0; i < num; i++ {
+			if argsStr == "" {
+				argsStr = "?"
+			} else {
+				argsStr = argsStr + ",?"
 			}
 		}
-		return argsStr
-	}
-
-	//获得args字符串(update)
-	func getHsAuthApiArgsStrUpdate() string {
-		var argsStr string
-		switch driverHsAuthApplication {
-		case "mysql":
-			argsStr = "api_key=?,name=?,type=?,created_at=?,updated_at=?,deleted_at=?,status_at=? WHERE "  + SDELFLAG + "=0 and id=?"
-		case "mariadb":
-			argsStr = "api_key=?,name=?,type=?,created_at=?,updated_at=?,deleted_at=?,status_at=? WHERE "  + SDELFLAG + "=0 and id=?"
-		case "cockroachDB":
-			argsStr = "api_key=$1,name=$2,type=$3,created_at=$4,updated_at=$5,deleted_at=$6,status_at=$7 WHERE "  + SDELFLAG + "=0 and id=$8"
-		case "postgresql":
-			argsStr = "api_key=$1,name=$2,type=$3,created_at=$4,updated_at=$5,deleted_at=$6,status_at=$7 WHERE "  + SDELFLAG + "=0 and id=$8"
+	case "mariadb":
+		for i := 0; i < num; i++ {
+			if argsStr == "" {
+				argsStr = "?"
+			} else {
+				argsStr = argsStr + ",?"
+			}
 		}
-		return argsStr
+	case "cockroachDB":
+		for i := 0; i < num; i++ {
+			if argsStr == "" {
+				argsStr = "$" + strconv.Itoa(i+1)
+			} else {
+				argsStr = argsStr + ",$" + strconv.Itoa(i+1)
+			}
+		}
+	case "postgresql":
+		for i := 0; i < num; i++ {
+			if argsStr == "" {
+				argsStr = "$" + strconv.Itoa(i+1)
+			} else {
+				argsStr = argsStr + ",$" + strconv.Itoa(i+1)
+			}
+		}
 	}
+	return argsStr
+}
 
-
+//获得args字符串(update)
+func getHsAuthApiArgsStrUpdate() string {
+	var argsStr string
+	switch driverHsAuthApplication {
+	case "mysql":
+		argsStr = "api_key=?,name=?,type=?,created_at=?,updated_at=?,deleted_at=?,status_at=? WHERE " + SDELFLAG + "=0 and id=?"
+	case "mariadb":
+		argsStr = "api_key=?,name=?,type=?,created_at=?,updated_at=?,deleted_at=?,status_at=? WHERE " + SDELFLAG + "=0 and id=?"
+	case "cockroachDB":
+		argsStr = "api_key=$1,name=$2,type=$3,created_at=$4,updated_at=$5,deleted_at=$6,status_at=$7 WHERE " + SDELFLAG + "=0 and id=$8"
+	case "postgresql":
+		argsStr = "api_key=$1,name=$2,type=$3,created_at=$4,updated_at=$5,deleted_at=$6,status_at=$7 WHERE " + SDELFLAG + "=0 and id=$8"
+	}
+	return argsStr
+}
 
 func (hsAuthApi HsAuthApi) Select(sql string, limit, offset int, value ...interface{}) ([]interface{}, error) {
 	for i := 0; i < len(Beforefun.Select); i++ { //前置hooks
@@ -171,7 +165,7 @@ func (hsAuthApi HsAuthApi) Select(sql string, limit, offset int, value ...interf
 	}
 	ar := make([]interface{}, limit) //0为可变数组长度
 	// ar[0].(*HsAuthRecords)
-	sqlstr := "select id,api_key,name,type,created_at,updated_at,deleted_at,status_at from hs_auth_api where "+ SDELFLAG + "=0 " + sql + " limit " + strconv.Itoa(limit) + " offset " + strconv.Itoa(offset)
+	sqlstr := "select id,api_key,name,type,created_at,updated_at,deleted_at,status_at from hs_auth_api where " + SDELFLAG + "=0 " + sql + " limit " + strconv.Itoa(limit) + " offset " + strconv.Itoa(offset)
 
 	sqlHsAuthApi = sqlstr
 	argsHsAuthApi = value
@@ -200,14 +194,14 @@ func (hsAuthApi HsAuthApi) Select(sql string, limit, offset int, value ...interf
 	}
 	columns, _ := rows.Columns()
 	values := make([]interface{}, len(columns))
-		values[0] = &hsAuthApi.Id
-		values[1] = &hsAuthApi.ApiKey
-		values[2] = &hsAuthApi.Name
-		values[3] = &hsAuthApi.Type
-		values[4] = &hsAuthApi.CreatedAt
-		values[5] = &hsAuthApi.UpdatedAt
-		values[6] = &hsAuthApi.DeletedAt
-		values[7] = &hsAuthApi.StatusAt
+	values[0] = &hsAuthApi.Id
+	values[1] = &hsAuthApi.ApiKey
+	values[2] = &hsAuthApi.Name
+	values[3] = &hsAuthApi.Type
+	values[4] = &hsAuthApi.CreatedAt
+	values[5] = &hsAuthApi.UpdatedAt
+	values[6] = &hsAuthApi.DeletedAt
+	values[7] = &hsAuthApi.StatusAt
 	num := 0
 	for rows.Next() {
 		if num >= MAXROWS && MAXROWS != -1 {
@@ -229,7 +223,6 @@ func (hsAuthApi HsAuthApi) Select(sql string, limit, offset int, value ...interf
 	}
 	return ar, err
 }
-	
 
 func (hsAuthApi *HsAuthApi) FindByID(id int64) (interface{}, error) {
 	for i := 0; i < len(Beforefun.FindByID); i++ { //前置hooks
@@ -265,14 +258,14 @@ func (hsAuthApi *HsAuthApi) FindByID(id int64) (interface{}, error) {
 	}
 	columns, _ := rows.Columns()
 	values := make([]interface{}, len(columns))
-		values[0] = &hsAuthApi.Id
-		values[1] = &hsAuthApi.ApiKey
-		values[2] = &hsAuthApi.Name
-		values[3] = &hsAuthApi.Type
-		values[4] = &hsAuthApi.CreatedAt
-		values[5] = &hsAuthApi.UpdatedAt
-		values[6] = &hsAuthApi.DeletedAt
-		values[7] = &hsAuthApi.StatusAt
+	values[0] = &hsAuthApi.Id
+	values[1] = &hsAuthApi.ApiKey
+	values[2] = &hsAuthApi.Name
+	values[3] = &hsAuthApi.Type
+	values[4] = &hsAuthApi.CreatedAt
+	values[5] = &hsAuthApi.UpdatedAt
+	values[6] = &hsAuthApi.DeletedAt
+	values[7] = &hsAuthApi.StatusAt
 	if rows.Next() {
 		err = rows.Scan(values...)
 		Checkerr(err)
@@ -287,7 +280,6 @@ func (hsAuthApi *HsAuthApi) FindByID(id int64) (interface{}, error) {
 	}
 	return hsAuthApi, err
 }
-	
 
 func (hsAuthApi HsAuthApi) Add() (int64, error) {
 	for i := 0; i < len(Beforefun.Add); i++ { //前置hooks
@@ -302,22 +294,21 @@ func (hsAuthApi HsAuthApi) Add() (int64, error) {
 	}
 	defer stmtIns.Close()
 	args := make([]interface{}, 7)
-		args[0]=&hsAuthApi.ApiKey
-		args[1]=&hsAuthApi.Name
-		args[2]=&hsAuthApi.Type
-		args[3]=&hsAuthApi.CreatedAt
-		args[4]=&hsAuthApi.UpdatedAt
-		args[5]=&hsAuthApi.DeletedAt
-		args[6]=&hsAuthApi.StatusAt
-		
+	args[0] = &hsAuthApi.ApiKey
+	args[1] = &hsAuthApi.Name
+	args[2] = &hsAuthApi.Type
+	args[3] = &hsAuthApi.CreatedAt
+	args[4] = &hsAuthApi.UpdatedAt
+	args[5] = &hsAuthApi.DeletedAt
+	args[6] = &hsAuthApi.StatusAt
+
 	sqlHsAuthApi = sqlstr
 	argsHsAuthApi = args
 
-
 	if UseAddCache {
-		if !addCacheFlagHsAuthApi  {
+		if !addCacheFlagHsAuthApi {
 			hsAuthApi.StartAddCache()
-			addCacheFlagHsAuthApi  = true
+			addCacheFlagHsAuthApi = true
 		}
 		l := new(sync.RWMutex)
 		l.Lock()
@@ -340,7 +331,6 @@ func (hsAuthApi HsAuthApi) Add() (int64, error) {
 	}
 
 }
-	
 
 func (hsAuthApi HsAuthApi) AddBatch(obj []interface{}) error {
 	for i := 0; i < len(Beforefun.AddBatch); i++ { //前置hooks
@@ -350,12 +340,12 @@ func (hsAuthApi HsAuthApi) AddBatch(obj []interface{}) error {
 	sqlstr := "INSERT INTO hs_auth_api (api_key,name,type,created_at,updated_at,deleted_at,status_at) VALUES (" + argsStr + ")"
 	tx, err := dbconnHsAuthApi.Begin()
 	if err != nil {
-		return  err
+		return err
 	}
 	stmt, err := tx.Prepare(sqlstr)
 	defer stmt.Close()
 	if err != nil {
-		return  err
+		return err
 	}
 	args := make([]interface{}, 7)
 
@@ -364,22 +354,22 @@ func (hsAuthApi HsAuthApi) AddBatch(obj []interface{}) error {
 
 	for _, value := range obj {
 		v := value.(HsAuthApi)
-	 		args[0]=v.ApiKey
-	 		args[1]=v.Name
-	 		args[2]=v.Type
-	 		args[3]=v.CreatedAt
-	 		args[4]=v.UpdatedAt
-	 		args[5]=v.DeletedAt
-	 		args[6]=v.StatusAt
-	 		
+		args[0] = v.ApiKey
+		args[1] = v.Name
+		args[2] = v.Type
+		args[3] = v.CreatedAt
+		args[4] = v.UpdatedAt
+		args[5] = v.DeletedAt
+		args[6] = v.StatusAt
+
 		_, err = stmt.Exec(args...)
 		if err != nil {
-			return  err
+			return err
 		}
 	}
 	err = tx.Commit()
 	if err != nil {
-		return  err
+		return err
 	}
 	for i := 0; i < len(Afterfun.AddBatch); i++ { //后置hooks
 		Afterfun.AddBatch[i]()
@@ -387,7 +377,6 @@ func (hsAuthApi HsAuthApi) AddBatch(obj []interface{}) error {
 
 	return err
 }
-
 
 func (hsAuthApi *HsAuthApi) Update() (int64, error) {
 	for i := 0; i < len(Beforefun.Update); i++ { //前置hooks
@@ -401,14 +390,14 @@ func (hsAuthApi *HsAuthApi) Update() (int64, error) {
 	}
 	defer stmtIns.Close()
 	args := make([]interface{}, 8)
-		args[0] = hsAuthApi.ApiKey
-		args[1] = hsAuthApi.Name
-		args[2] = hsAuthApi.Type
-		args[3] = hsAuthApi.CreatedAt
-		args[4] = hsAuthApi.UpdatedAt
-		args[5] = hsAuthApi.DeletedAt
-		args[6] = hsAuthApi.StatusAt
-		args[7]=&hsAuthApi.Id
+	args[0] = hsAuthApi.ApiKey
+	args[1] = hsAuthApi.Name
+	args[2] = hsAuthApi.Type
+	args[3] = hsAuthApi.CreatedAt
+	args[4] = hsAuthApi.UpdatedAt
+	args[5] = hsAuthApi.DeletedAt
+	args[6] = hsAuthApi.StatusAt
+	args[7] = &hsAuthApi.Id
 	sqlHsAuthApi = sqlstr
 	argsHsAuthApi = args
 	result, err := stmtIns.Exec(args...)
@@ -420,7 +409,6 @@ func (hsAuthApi *HsAuthApi) Update() (int64, error) {
 	}
 	return result.RowsAffected()
 }
-
 
 func (hsAuthApi HsAuthApi) UpdateBatch(obj []interface{}) error {
 	for i := 0; i < len(Beforefun.UpdateBatch); i++ { //前置hooks
@@ -441,14 +429,14 @@ func (hsAuthApi HsAuthApi) UpdateBatch(obj []interface{}) error {
 
 	for _, value := range obj {
 		v := value.(HsAuthApi)
-	 		args[0] = v.ApiKey
-	 		args[1] = v.Name
-	 		args[2] = v.Type
-	 		args[3] = v.CreatedAt
-	 		args[4] = v.UpdatedAt
-	 		args[5] = v.DeletedAt
-	 		args[6] = v.StatusAt
-	 		args[7]=v.Id
+		args[0] = v.ApiKey
+		args[1] = v.Name
+		args[2] = v.Type
+		args[3] = v.CreatedAt
+		args[4] = v.UpdatedAt
+		args[5] = v.DeletedAt
+		args[6] = v.StatusAt
+		args[7] = v.Id
 		_, err = stmt.Exec(args...)
 		if err != nil {
 			return err
@@ -467,7 +455,6 @@ func (hsAuthApi HsAuthApi) UpdateBatch(obj []interface{}) error {
 	return err
 }
 
-
 func (hsAuthApi HsAuthApi) SDelete() (int64, error) {
 	hsAuthApi.StatusAt = 1
 	return hsAuthApi.Update()
@@ -482,13 +469,12 @@ func (hsAuthApi HsAuthApi) SDeleteBatch(obj []interface{}) error {
 	return hsAuthApi.UpdateBatch(obj)
 }
 
-
 func (hsAuthApi HsAuthApi) Delete() (int64, error) {
 	for i := 0; i < len(Beforefun.Delete); i++ { //前置hooks
 		Beforefun.Delete[i]()
 	}
 	argsStr := getHsAuthApiArgsStr(1)
-  sqlstr := "DELETE FROM hs_auth_api WHERE id = " + argsStr
+	sqlstr := "DELETE FROM hs_auth_api WHERE id = " + argsStr
 	stmt, err := dbconnHsAuthApi.Prepare(sqlstr)
 	if err != nil {
 		return 0, err
@@ -506,7 +492,6 @@ func (hsAuthApi HsAuthApi) Delete() (int64, error) {
 	}
 	return result.RowsAffected()
 }
-
 
 func (hsAuthApi HsAuthApi) DeleteBatch(obj []interface{}) error {
 	for i := 0; i < len(Beforefun.DeleteBatch); i++ { //前置hooks
@@ -545,7 +530,6 @@ func (hsAuthApi HsAuthApi) DeleteBatch(obj []interface{}) error {
 	return err
 }
 
-
 func (hsAuthApi HsAuthApi) Exec(sql string, value ...interface{}) (int64, error) {
 	for i := 0; i < len(Beforefun.Exec); i++ { //前置hooks
 		Beforefun.Exec[i]()
@@ -569,4 +553,3 @@ func (hsAuthApi HsAuthApi) Exec(sql string, value ...interface{}) (int64, error)
 	}
 	return result.RowsAffected()
 }
-

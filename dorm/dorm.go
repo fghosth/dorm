@@ -339,7 +339,12 @@ func CreateAddBatch(structStr string) string {
 	//	}
 	//
 	//}
-	for i, v := range field {
+	i := 0
+	for _, v := range field {
+		if ut.CalToUnder(v["field"]) == "id" || ut.CalToUnder(v["field"]) == "create_at" || ut.CalToUnder(v["field"]) == "update_at" || ut.CalToUnder(v["field"]) == "status_at" { //排除自动生成的字段
+			length--
+			continue
+		}
 		values[i] = "args[" + strconv.Itoa(i) + "]=v." + v["field"]
 		if fields == "" {
 			parms = "?"
@@ -350,6 +355,7 @@ func CreateAddBatch(structStr string) string {
 			cockroachParms = cockroachParms + ",$" + strconv.Itoa(i)
 			fields = fields + "," + ut.CalToUnder(v["field"])
 		}
+		i++
 	}
 	ctx := map[string]interface{}{
 		"objvar":         objvar,
@@ -367,6 +373,7 @@ func CreateAddBatch(structStr string) string {
 }
 
 func CreateAdd(structStr string) string {
+
 	obj := sl.StructName(structStr)
 	keytype := sl.FieldIndexKey(structStr) //获取主键类型
 	retstr := "return 0, err"
@@ -395,7 +402,12 @@ func CreateAdd(structStr string) string {
 	//	}
 	//
 	//}
-	for i, v := range field {
+	i := 0
+	for _, v := range field {
+		if ut.CalToUnder(v["field"]) == "id" || ut.CalToUnder(v["field"]) == "create_at" || ut.CalToUnder(v["field"]) == "update_at" || ut.CalToUnder(v["field"]) == "status_at" { //排除自动生成的字段
+			length--
+			continue
+		}
 		values[i] = "args[" + strconv.Itoa(i) + "]=&" + objvar + "." + v["field"]
 		if fields == "" {
 			parms = "?"
@@ -404,6 +416,7 @@ func CreateAdd(structStr string) string {
 			parms = parms + ",?"
 			fields = fields + "," + ut.CalToUnder(v["field"])
 		}
+		i++
 	}
 	ctx := map[string]interface{}{
 		"retIDstr":  retIDstr, //返回添加成功后id

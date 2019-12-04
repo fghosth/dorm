@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"os"
 	"time"
 
@@ -162,6 +163,23 @@ func main() {
 			},
 			Action: func(c *cli.Context) error {
 				return CstructFile(c)
+			},
+		},
+		{
+			Name:    "init",
+			Aliases: []string{"init"},
+			Usage:   "生成项目目录结构",
+			Flags: []cli.Flag{
+				cli.StringFlag{
+					Name:  "file, f",
+					Value: "./",
+					Usage: "sql文件.",
+				},
+			},
+			Action: func(c *cli.Context) error {
+				err := initProject(c)
+				fmt.Println(err)
+				return err
 			},
 		},
 	}

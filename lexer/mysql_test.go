@@ -1,7 +1,9 @@
 package lexer_test
 
 import (
+	"github.com/k0kubun/pp"
 	"jvole.com/createProject/lexer"
+	"testing"
 )
 
 var sqlStr string
@@ -9,7 +11,8 @@ var mysqlLexer lexer.MysqlLexer
 
 func init() {
 	mysqlLexer := new(lexer.MysqlLexer)
-	sqlStr = mysqlLexer.SqlString("../auth.sql")
+	sqlStr = mysqlLexer.SqlString("../reports.sql")
+	//sqlStr = mysqlLexer.SqlString("../auth.sql")
 }
 
 // func TestCreateCockInsertSqlFromMysql(t *testing.T) {
@@ -62,13 +65,13 @@ func init() {
 // 	}
 // }
 //
-// func TestField(t *testing.T) {
-// 	str := mysqlLexer.CreateTableString(sqlStr)
-// 	for _, v := range str {
-// 		name := mysqlLexer.Field(v)
-// 		fmt.Println(name)
-// 	}
-// }
+func TestField(t *testing.T) {
+	str := mysqlLexer.CreateTableString(sqlStr)
+	for _, v := range str {
+		name := mysqlLexer.Field(v)
+		pp.Println(name)
+	}
+}
 
 // func TestUQName(t *testing.T) {
 // 	str := mysqlLexer.CreateTableString(sqlStr)

@@ -14,12 +14,12 @@ import (
 
 var (
 	//匹配所有mysql变量 匹配完整单词 解决 同时出现datetime 和date的问题
-	sqlType = `(?i)\b(tinyint|smallint|mediumint|int|integer|bigint|date|datetime|time|bit|tinytext|mediumtext|longtext|text|tinyblob|mediumblob|longblob|blob|float|double|decimal|timestamp|year|char|varchar|varbinary|enum|set|json)\b\(.+?\)|\b(tinyint|smallint|mediumint|int|integer|bigint|date|datetime|time|bit|tinytext|mediumtext|longtext|text|tinyblob|mediumblob|longblob|blob|float|double|decimal|timestamp|year|char|varchar|varbinary|enum|set|json)\b`
+	sqlType = `(?i)\b(bool|tinyint|smallint|mediumint|int|integer|bigint|date|datetime|time|bit|tinytext|mediumtext|longtext|text|tinyblob|mediumblob|longblob|blob|float|double|decimal|timestamp|year|char|varchar|varbinary|enum|set|json)\b\(.+?\)|\b(bool|tinyint|smallint|mediumint|int|integer|bigint|date|datetime|time|bit|tinytext|mediumtext|longtext|text|tinyblob|mediumblob|longblob|blob|float|double|decimal|timestamp|year|char|varchar|varbinary|enum|set|json)\b`
 	// tableName = "(?<=TABLE[\\s]{1,200}`).{1,}(?=`)"
 	//获取tablename所在行(?i)忽略大小写
 	tableNameLine = "(?i)(CREATE TABLE).+\\`"
 	//匹配所有字段
-	col = "`.+`"
+	col = "`.+?`"
 	//匹配字段属性
 	property = `(?i)\b(NOT NULL|(DEFAULT.+)|AUTO_INCREMENT|unsigned|zerofill|PRIMARY.+,)`
 	//找出所以cerate table代码段
@@ -57,16 +57,16 @@ var (
 	}
 	MysqlToStructMap = map[string]string{
 		"tinyint":    "int8",
-		"smallint":   "int16",
-		"mediumint":  "int32",
-		"int":        "int64",
-		"integer":    "int64",
-		"bigint":     "int64",
+		"smallint":   "int",
+		"mediumint":  "int",
+		"int":        "int",
+		"integer":    "int",
+		"bigint":     "int",
 		"date":       "string",
 		"datetime":   "string",
 		"time":       "string",
 		"bit":        "int8",
-		"bool":       "int16",
+		"bool":       "bool",
 		"tinytext":   "string",
 		"mediumtext": "string",
 		"longtext":   "string",
@@ -78,7 +78,7 @@ var (
 		"float":      "float32",
 		"double":     "float64",
 		"decimal":    "float64",
-		"timestamp":  "string",
+		"timestamp":  "time.Time",
 		"year":       "string",
 		"char":       "string",
 		"varchar":    "string",

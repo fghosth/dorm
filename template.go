@@ -27,6 +27,7 @@ var errBadRoute = errors.New("bad route")
 var User, Password string
 var qps = 100000 //访问频率
 
+//MakeHandler 
 func MakeHandler(bs {{{sname}}}, logger kitlog.Logger) http.Handler {
 
 	opts := []kithttp.ServerOption{
@@ -50,6 +51,7 @@ func MakeHandler(bs {{{sname}}}, logger kitlog.Logger) http.Handler {
 {{{this}}}
 {{/each}}
 
+//encodeResponse 
 func encodeResponse(ctx context.Context, w http.ResponseWriter, response interface{}) error {
 	defer func(begin time.Time) {
 		pc, file, line, _ := runtime.Caller(1)
@@ -74,7 +76,7 @@ type errorer interface {
 	error() error
 }
 
-// encode errors from business-logic
+//encodeError encode errors from business-logic
 func encodeError(_ context.Context, err error, w http.ResponseWriter) {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	switch err {
@@ -110,6 +112,7 @@ type instrumentingService struct {
 	next {{{sname}}}
 }
 
+//NewInstrumentingService 
 func NewInstrumentingService(counter metrics.Counter, latency metrics.Histogram, s {{{sname}}}) {{{sname}}} {
 	return &instrumentingService{
 		requestCount:   counter,
@@ -141,7 +144,7 @@ func NewInstrumentingService(counter metrics.Counter, latency metrics.Histogram,
 		logger log.Logger
 		next   {{{sname}}}
 	}
-
+//NewLoggingService 
 	func NewLoggingService(logger log.Logger, s {{{sname}}}) {{{sname}}} {
 		return &loggingService{logger, s}
 	}
@@ -199,6 +202,7 @@ type Dstring struct{
 
 }
 
+//FUPer 
 func (ds *Dstring) FUPer(str string) (string,error){
   errEmpty := errors.New("字符串为空")
   v := []byte(str)

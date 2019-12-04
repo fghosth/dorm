@@ -1,7 +1,10 @@
 package lexer_test
 
 import (
+	"fmt"
 	"jvole.com/createProject/lexer"
+	"os"
+	"testing"
 )
 
 var cocksqlStr string
@@ -10,6 +13,11 @@ var cockDBlexer lexer.CockDBLexer
 func init() {
 	cockDBlexer := new(lexer.CockDBLexer)
 	cocksqlStr = cockDBlexer.SqlString("../cockroach.sql")
+}
+
+func TestTde(t *testing.T) {
+	str, _ := os.Getwd()
+	fmt.Println(str)
 }
 
 // func TestCockCreateSqlByStructStr(t *testing.T) {

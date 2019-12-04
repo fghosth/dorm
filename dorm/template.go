@@ -2,6 +2,7 @@ package dorm
 
 const (
 	Select_TPL = `
+//Select 
 func ({{{objvar}}} {{{obj}}}) Select(sql string, limit, offset int, value ...interface{}) ([]interface{}, error) {
 	for i := 0; i < len(Beforefun.Select); i++ { //前置hooks
 		Beforefun.Select[i]()
@@ -67,6 +68,7 @@ func ({{{objvar}}} {{{obj}}}) Select(sql string, limit, offset int, value ...int
 }
 	`
 	FindByID_TPL = `
+//FindByID
 func ({{{objvar}}} *{{{obj}}}) FindByID(id {{{keytype}}}) (interface{}, error) {
 	for i := 0; i < len(Beforefun.FindByID); i++ { //前置hooks
 		Beforefun.FindByID[i]()
@@ -121,6 +123,7 @@ func ({{{objvar}}} *{{{obj}}}) FindByID(id {{{keytype}}}) (interface{}, error) {
 	`
 
 	Add_TPL = `
+//Add 
 func ({{{objvar}}} {{{obj}}}) Add() ({{{keytype}}}, error) {
 	for i := 0; i < len(Beforefun.Add); i++ { //前置hooks
 		Beforefun.Add[i]()
@@ -169,6 +172,7 @@ func ({{{objvar}}} {{{obj}}}) Add() ({{{keytype}}}, error) {
 }
 	`
 	AddBatch_TPL = `
+//AddBatch 
 func ({{{objvar}}} {{{obj}}}) AddBatch(obj []interface{}) error {
 	for i := 0; i < len(Beforefun.AddBatch); i++ { //前置hooks
 		Beforefun.AddBatch[i]()
@@ -212,6 +216,7 @@ func ({{{objvar}}} {{{obj}}}) AddBatch(obj []interface{}) error {
 }
 `
 	Update_TPL = `
+//Update 
 func ({{{objvar}}} *{{{obj}}}) Update() (int64, error) {
 	for i := 0; i < len(Beforefun.Update); i++ { //前置hooks
 		Beforefun.Update[i]()
@@ -240,6 +245,7 @@ func ({{{objvar}}} *{{{obj}}}) Update() (int64, error) {
 }
 `
 	UpdateBatch_TPL = `
+//UpdateBatch 
 func ({{{objvar}}} {{{obj}}}) UpdateBatch(obj []interface{}) error {
 	for i := 0; i < len(Beforefun.UpdateBatch); i++ { //前置hooks
 		Beforefun.UpdateBatch[i]()
@@ -282,6 +288,7 @@ func ({{{objvar}}} {{{obj}}}) UpdateBatch(obj []interface{}) error {
 }
 `
 	Delete_TPL = `
+//Delete
 func ({{{objvar}}} {{{obj}}}) Delete() (int64, error) {
 	for i := 0; i < len(Beforefun.Delete); i++ { //前置hooks
 		Beforefun.Delete[i]()
@@ -311,6 +318,7 @@ func ({{{objvar}}} {{{obj}}}) Delete() (int64, error) {
 }
 `
 	DeleteBatch_TPL = `
+//DeleteBatch
 func ({{{objvar}}} {{{obj}}}) DeleteBatch(obj []interface{}) error {
 	for i := 0; i < len(Beforefun.DeleteBatch); i++ { //前置hooks
 		Beforefun.DeleteBatch[i]()
@@ -350,6 +358,7 @@ func ({{{objvar}}} {{{obj}}}) DeleteBatch(obj []interface{}) error {
 }
 `
 	Exec_TPL = `
+//Exec 
 func ({{{objvar}}} {{{obj}}}) Exec(sql string, value ...interface{}) (int64, error) {
 	for i := 0; i < len(Beforefun.Exec); i++ { //前置hooks
 		Beforefun.Exec[i]()
@@ -375,7 +384,7 @@ func ({{{objvar}}} {{{obj}}}) Exec(sql string, value ...interface{}) (int64, err
 }
 `
 	GetArgsStrFun_TPL = `
-	//获得args字符串(除了update)
+	//ArgsStr 获得args字符串(除了update)
 	func get{{{obj}}}ArgsStr(num int) string {
 		var argsStr string
 		switch driver{{{obj}}} {
@@ -415,7 +424,7 @@ func ({{{objvar}}} {{{obj}}}) Exec(sql string, value ...interface{}) (int64, err
 		return argsStr
 	}
 
-	//获得args字符串(update)
+	//ArgsStrUpdate 获得args字符串(update)
 	func get{{{obj}}}ArgsStrUpdate() string {
 		var argsStr string
 		switch driver{{{obj}}} {
@@ -433,15 +442,17 @@ func ({{{objvar}}} {{{obj}}}) Exec(sql string, value ...interface{}) (int64, err
 
 `
 	SDEL_TPL = `
+//SDelete 
 func ({{{objvar}}} {{{obj}}}) SDelete() (int64, error) {
-	{{{objvar}}}.StatusAt = 1
+	{{{objvar}}}.IsDeleted = 1
 	return {{{objvar}}}.Update()
 }
 
+//SDeleteBatch 
 func ({{{objvar}}} {{{obj}}}) SDeleteBatch(obj []interface{}) error {
 	for i := 0; i < len(obj); i++ {
 		o := obj[i].({{{obj}}})
-		o.StatusAt = 1
+		o.IsDeleted = 1
 		obj[i] = o
 	}
 	return {{{objvar}}}.UpdateBatch(obj)
@@ -469,7 +480,7 @@ _ "github.com/lib/pq"
 )
 `
 	Function_TPL = `
-	//检查增加缓存
+	//checkAddCache 检查增加缓存
 	func ({{{objvar}}} {{{obj}}}) checkAddCache() {
 		for range time.Tick(1 * time.Second) {
 			if len(addCache{{{obj}}}) >= AddCacheLen || count{{{obj}}} >= AddCacheExp {
@@ -489,7 +500,7 @@ _ "github.com/lib/pq"
 
 
 
-	//开始添加缓存进程
+	//StartAddCache 开始添加缓存进程
 	func ({{{objvar}}} {{{obj}}}) StartAddCache()  {
 		if UseAddCache {
 			addCache{{{obj}}} = make([]interface{}, 0)
@@ -497,12 +508,12 @@ _ "github.com/lib/pq"
 		}
 	}
 
-//返回执行语句后sql，调试用
+//GetSql 返回执行语句后sql，调试用
 func ({{{objvar}}} {{{obj}}}) GetSql() (string, []interface{}) {
 	return sql{{{obj}}}, args{{{obj}}}
 }
 
-//设置db
+//SetDBConn 设置db
 func ({{{objvar}}} {{{obj}}}) SetDBConn(db, str string) {
 	var err error
 	driver{{{obj}}} = db
@@ -529,7 +540,7 @@ func ({{{objvar}}} {{{obj}}}) SetDBConn(db, str string) {
 		}
 	}
 }
-
+//New 
 func New{{{obj}}}() {{{obj}}} {
 	dbconn{{{obj}}} = DB
 	driver{{{obj}}} = Driver
@@ -549,135 +560,109 @@ type {{{obj}}}Dao struct {
 	model base.Model
 	base.{{{obj}}}
 }
-/*
-			 根据条件查找结果集
-			 @parm sql 除去select where 1=1  xxx,xxx from tablename 之后的东西 如果要加where先加『and』eg【and username = "derek"】
-			 @parm value sql中?值 可以为空
-			 @parm limit 显示数量
-			 @parm offset 数据位置0开始
-			 @return struct 集合
-			 @return error 错误
-*/
+//Select 根据条件查找结果集
+//@parm sql 除去select where 1=1  xxx,xxx from tablename 之后的东西 如果要加where先加『and』eg【and username = "derek"】
+//@parm value sql中?值 可以为空
+//@parm limit 显示数量
+//@parm offset 数据位置0开始
+//@return struct 集合
+//@return error 错误
 func (dao {{{obj}}}Dao) Select(sql string, limit, offset int, value ...interface{}) ([]interface{}, error) {
 	return dao.model.Select(sql, limit, offset, value...)
 }
-/*
-			 根据主键查找
-			 @parm id 主键
-			 @return struct
-			 @return error 错误
-*/
+
+//FindByID 根据主键查找
+//@parm id 主键
+//@return struct
+//@return error 错误
 func (dao *{{{obj}}}Dao) FindByID(id {{{keytype}}}) (interface{}, error) {
 	res, err := dao.model.FindByID(id)
 	re := res.(*base.{{{obj}}})
 	dao.{{{obj}}} = *re
 	return res, err
 }
-/*
-			 根据自身struct内容添加
-			 @parm
-			 @return 返回主键id
-			 @return error 错误
-*/
+//Add 根据自身struct内容添加
+//@parm
+//@return 返回主键id
+//@return error 错误
 func (dao {{{obj}}}Dao) Add() ({{{keytype}}}, error) {
 	b := dao.getObjWithValue(dao)
 	dao.model = &b
 	return dao.model.Add()
 }
-/*
-			 批量添加
-			 @parm struct数组
-			 @return error 错误
-*/
+//AddBatch 批量添加
+//@parm struct数组
+//@return error 错误
 func (dao {{{obj}}}Dao) AddBatch(obj []interface{}) error {
 	return dao.model.AddBatch(obj)
 }
-/*
-			 根据自身struct更新
-			 @parm
-			 @return  修改记录的id
-			 @return error 错误
-*/
+//Update 根据自身struct更新
+//@parm
+//@return  修改记录的id
+//@return error 错误
 func (dao {{{obj}}}Dao) Update() (int64, error) {
 	b := dao.getObjWithValue(dao)
 	dao.model = &b
 	return dao.model.Update()
 }
-/*
-			 批量更新
-			 @parm struct数组
-			 @return error 错误
-*/
+//UpdateBatch 批量更新
+//@parm struct数组
+//@return error 错误
 func (dao {{{obj}}}Dao) UpdateBatch(obj []interface{}) error {
 	return dao.model.UpdateBatch(obj)
 }
-/*
-			 根据自身struct删除
-			 @parm
-			 @return  影响行数
-			 @return error 错误
-*/
+//Delete 根据自身struct删除
+//@parm
+//@return  影响行数
+// @return error 错误
 func (dao {{{obj}}}Dao) Delete() (int64, error) {
 	b := dao.getObjWithValue(dao)
 	dao.model = &b
 	return dao.model.Delete()
 }
-/*
-			 批量删除
-			 @parm struct struct数组
-			 @return error 错误
-*/
+//DeleteBatch 批量删除
+//@parm struct struct数组
+//@return error 错误
 func (dao {{{obj}}}Dao) DeleteBatch(obj []interface{}) error {
 	return dao.model.DeleteBatch(obj)
 }
-/*
- 根据自身struct软删除
- @parm
- @return  影响数据id
- @return error 错误
-*/
+//SDelete 根据自身struct软删除
+// @parm
+//@return  影响数据id
+//@return error 错误
 func (dao {{{obj}}}Dao) SDelete() (int64, error) {
 	b := dao.getObjWithValue(dao)
 	dao.model = &b
 	return dao.model.SDelete()
 }
 
-/*
- 批量软删除
- @parm struct struct数组
- @return error 错误
-*/
-
+//SDeleteBatch 批量软删除
+//@parm struct struct数组
+//@return error 错误
 func (dao {{{obj}}}Dao) SDeleteBatch(obj []interface{}) error {
 	return dao.model.SDeleteBatch(obj)
 }
 
-/*
-			 执行sql语句 非查询的语句
-			 @parm sql sql语句，valuesql语句中?的部分，可以为空
-			 @return int64 影响的行数
-			 @return error 错误
-*/
+//Exec			 执行sql语句 非查询的语句
+//@parm sql sql语句，valuesql语句中?的部分，可以为空
+//@return int64 影响的行数
+//@return error 错误
 func (dao {{{obj}}}Dao) Exec(sql string, value ...interface{}) (int64, error) {
 	return dao.model.Exec(sql, value...)
 }
-/*
-			 获取最后执行的sql语句 和参数
-			 @return string sql语句和参数
-*/
+//GetSql 获取最后执行的sql语句 和参数
+//@return string sql语句和参数
 func (dao {{{obj}}}Dao) GetSql() (string, []interface{}) {
 	return dao.model.GetSql()
 }
-/*
-			 设置当前对象的链接
-			 @db 数据库默认值mysql 支持mysql，mariadb，cockroachDB
-			 @str 数据库连接 『postgresql://derek:123456@localhost:26257/auth?sslmode=disable』 【root:@tcp(localhost:3306)/praise_auth?charset=utf8】
-*/
+//SetDBConn	 设置当前对象的链接
+//@db 数据库默认值mysql 支持mysql，mariadb，cockroachDB
+//@str 数据库连接 『postgresql://derek:123456@localhost:26257/auth?sslmode=disable』 【root:@tcp(localhost:3306)/praise_auth?charset=utf8】
 func (dao {{{obj}}}Dao) SetDBConn(db, str string) {
 	dao.model.SetDBConn(db, str)
 }
 
-//获取有值的对象
+//getObjWithValue 获取有值的对象
 func (daoo {{{obj}}}Dao) getObjWithValue(dao {{{obj}}}Dao) base.{{{obj}}} {
 	{{{objvar}}} := base.New{{{obj}}}()
 	{{#each field}}
@@ -685,7 +670,7 @@ func (daoo {{{obj}}}Dao) getObjWithValue(dao {{{obj}}}Dao) base.{{{obj}}} {
 	{{/each}}
 	return {{{objvar}}}
 }
-
+//New
 func New{{{obj}}}Dao() {{{obj}}}Dao {
 	ap := base.New{{{obj}}}()
 	aa := base.{{{obj}}}{}
@@ -707,7 +692,7 @@ const (
 	LIMIT   = 500  //默认查询条数限制
 	OFFSET  = 0    //默认位置
 	MAXROWS = 1000 //最多查出多少条,-1为不限制
-	SDELFLAG = "status_at" //数据库必出有这个字段才有用，软删除字段 0为未删除，1为删除
+	SDELFLAG = "is_deleted" //数据库必出有这个字段才有用，软删除字段 0为未删除，1为删除
 	UNDEL    = 0           //为删除
 	DELED    = 1           //删除
 )
@@ -729,7 +714,7 @@ var (
 	UT        = Dstring{} //工具类
 )
 
-//设置缓存类型
+//SetCacheType 设置缓存类型
 func SetCacheType(ctype string, clen int) {
 	switch ctype {
 	case "LRU":
@@ -741,62 +726,63 @@ func SetCacheType(ctype string, clen int) {
 	}
 }
 
-//设置缓存时间 秒 默认30
+//SetCacheTime 设置缓存时间 秒 默认30
 func SetCacheTime(t int) {
 	cacheTime = t
 }
 
-//获取缓存时间
+//GetCacheTime 获取缓存时间
 func GetCacheTime() int {
 	return cacheTime
 }
 
-//设置缓存容量 个数默认2000
+//SetCacheLen 设置缓存容量 个数默认2000
 func SetCacheLen(l int) {
 	cacheLen = l
 }
 
-//获取缓存容量
+//GetCacheLen 获取缓存容量
 func GetCacheLen() int {
 	return cacheLen
 }
 
-//获取已缓存的数量
+//GetCacheUsedLen 获取已缓存的数量
 func GetCacheUsedLen() int {
 	return cache.Len()
 }
 
 
-//设置是否开启缓存true为开启，false关闭
+//UseCache 设置是否开启缓存true为开启，false关闭
 func UseCache(uc bool) {
 	useCache = uc
 }
 
-//获取缓存是否开启
+//CacheUsed 获取缓存是否开启
 func CacheUsed() bool {
 	return useCache
 }
 
-//获取缓存命中率
+//GetCacheRate 获取缓存命中率
 func GetCacheRate() float64 {
 	return cache.HitRate()
 }
 
-//设置缓存
+//SetCache 设置缓存
 func SetCache(k, v interface{}) error {
 	return cache.SetWithExpire(k, v, time.Second*time.Duration(cacheTime))
 }
 
-//获取缓存
+//GetCache 获取缓存
 func GetCache(k interface{}) (interface{}, error) {
 	return cache.Get(k)
 }
 
-func Init(url string) {
+//Init 
+func Init(driver,url string) {
 	SetCacheType(cacheType, cacheLen)
-	// SetConn("mysql", "root:@tcp(localhost:3306)/praise_auth?charset=utf8")
+	// SetConn("mysql", "root:@tcp(localhost:3306)/praise_auth?charset=utf8mb4&parseTime=true")
 	//SetConn("cockroachDB", "postgresql://root@alcockroach1:26257/uuabc?sslmode=disable")
-	SetConn("cockroachDB", url)
+	SetConn(driver, url)
 }
 
 /*
@@ -894,9 +880,7 @@ type Model interface {
 	SetDBConn(db, str string)
 }
 
-/*
-获取不同类型数据库连接，支持mysql，mariadb，cockroachDB
-*/
+//SetConn 获取不同类型数据库连接，支持mysql，mariadb，cockroachDB
 func SetConn(db, str string) {
 	var err error
 	Driver = db
@@ -924,6 +908,7 @@ func SetConn(db, str string) {
 	}
 
 }
+//Checkerr
 func Checkerr(err error) error {
 	if err != nil {
 		fmt.Println(err)
@@ -945,6 +930,7 @@ type Before struct {
 	Exec        []func()
 }
 
+//AddBeforeFun
 func AddBeforeFun(f func(), w string) bool {
 	success := true
 	switch w {
@@ -984,6 +970,7 @@ type After struct {
 	Exec        []func()
 }
 
+//AddAfterFun 
 func AddAfterFun(f func(), w string) bool {
 	success := true
 	switch w {
@@ -1023,7 +1010,7 @@ import (
 type Dstring struct {
 }
 
-//对象数组转化为义某分隔符合并的字符串
+//JoinInterface 对象数组转化为义某分隔符合并的字符串
 func (ds *Dstring) JoinInterface(obj []interface{}, seq string) string {
 	var str, tmp string
 	for i := 0; i < len(obj); i++ {
@@ -1044,7 +1031,7 @@ func (ds *Dstring) JoinInterface(obj []interface{}, seq string) string {
 	return str
 }
 
-//md5加密
+//Md5Str md5加密
 func (ds *Dstring) Md5Str(str string) string {
 	md5Ctx := md5.New()
 	md5Ctx.Write([]byte(str))

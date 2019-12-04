@@ -1,39 +1,37 @@
-
 package base
 
 import (
 	"database/sql"
 	"fmt"
-	"log"
-	"time"
 	"jvole.com/algo-go/gcache"
 	"jvole.com/createProject/util"
+	"log"
+	"time"
 )
 
 const (
-	LIMIT   = 500  //默认查询条数限制
-	OFFSET  = 0    //默认位置
-	MAXROWS = 1000 //最多查出多少条,-1为不限制
+	LIMIT    = 500         //默认查询条数限制
+	OFFSET   = 0           //默认位置
+	MAXROWS  = 1000        //最多查出多少条,-1为不限制
 	SDELFLAG = "status_at" //数据库必出有这个字段才有用，软删除字段 0为未删除，1为删除
 	UNDEL    = 0           //为删除
 	DELED    = 1           //删除
 )
 
-
 var (
-	DB        *sql.DB //数据库连接
-	Beforefun Before
-	Afterfun  After
-	Driver    string
-	cacheLen  = 3000  //缓存条数
-	cacheTime = 30   //缓存时间 秒
-	useCache  = true  //是否使用缓存
-	cacheType = "ARC" //缓存类型:LRU,LFU,ARC
-	cache     gcache.Cache
+	DB          *sql.DB //数据库连接
+	Beforefun   Before
+	Afterfun    After
+	Driver      string
+	cacheLen    = 3000  //缓存条数
+	cacheTime   = 30    //缓存时间 秒
+	useCache    = true  //是否使用缓存
+	cacheType   = "ARC" //缓存类型:LRU,LFU,ARC
+	cache       gcache.Cache
 	UseAddCache = true           //是否使用插入缓存 如每2秒写一次数据库，或者超过300条写一次数据库
 	AddCacheLen = 300            //插入缓存数量
 	AddCacheExp = 3              //插入缓存过期时间 秒
-	UT        = util.Dstring{} //工具类
+	UT          = util.Dstring{} //工具类
 )
 
 //设置缓存类型
@@ -72,7 +70,6 @@ func GetCacheLen() int {
 func GetCacheUsedLen() int {
 	return cache.Len()
 }
-
 
 //设置是否开启缓存true为开启，false关闭
 func UseCache(uc bool) {
@@ -317,4 +314,3 @@ func AddAfterFun(f func(), w string) bool {
 
 	return success
 }
-

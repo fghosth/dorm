@@ -81,7 +81,7 @@ var (
 		"BYTEA":            "[]byte",
 		"BYTES":            "[]byte",
 		"ARRAY":            "[]string",
-		"JSONB":             "string",
+		"JSONB":            "string",
 	}
 )
 

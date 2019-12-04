@@ -15,7 +15,7 @@ var (
 	//所有成员变量行
 	structFieldStr = "[a-zA-Z].+"
 	//所有go变量类型
-	keywordStr = `\b(int|int8|int16|int32|int64|string|float32|float64|\[\]byte|bool)\b`
+	keywordStr = `\b(time\.Time|int|int8|int16|int32|int64|string|float32|float64|\[\]byte|bool)\b`
 	//所有导出类单词
 	oupPutWord = `[A-Z][a-zA-z\\b]+`
 	//所有tag
