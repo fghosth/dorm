@@ -661,13 +661,21 @@ func (dao {{{obj}}}Dao) GetSql() (string, []interface{}) {
 func (dao {{{obj}}}Dao) SetDBConn(db, str string) {
 	dao.model.SetDBConn(db, str)
 }
+//AddBatchEasy 批量添加
+//@parm struct数组
+//@return error 错误
+func (dao {{{obj}}}Dao) AddBatchEasy({{{objvar}}} []{{{obj}}}Dao) error {
+	obj := make([]interface{}, len({{{objvar}}}))
+	for k, value := range {{{objvar}}} {
+		obj[k] = value.{{{obj}}}
+	}
+	return dao.model.AddBatch(obj)
+}
 
 //getObjWithValue 获取有值的对象
 func (daoo {{{obj}}}Dao) getObjWithValue(dao {{{obj}}}Dao) base.{{{obj}}} {
 	{{{objvar}}} := base.New{{{obj}}}()
-	{{#each field}}
-	{{{this}}}
-	{{/each}}
+	{{{objvar}}} = dao.{{{obj}}}	
 	return {{{objvar}}}
 }
 //New

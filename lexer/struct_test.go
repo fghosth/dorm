@@ -2,6 +2,7 @@ package lexer_test
 
 import (
 	"fmt"
+	"github.com/k0kubun/pp"
 	"jvole.com/createProject/lexer"
 	"testing"
 )
@@ -24,7 +25,7 @@ func TestStructField(t *testing.T) {
 	slist := sl.StructStr(fileStr)
 	for _, v := range slist {
 		str := sl.FieldName(v)
-		fmt.Println(str)
+		pp.Println(str)
 	}
 }
 
